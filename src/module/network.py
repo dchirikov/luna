@@ -187,7 +187,7 @@ class Network(Base):
             obj_json['NETWORK'] = network
             obj_json['PREFIX'] = value
         ret = self._mongo_collection.update({'_id': self._id}, {'$set': obj_json}, multi=False, upsert=False)
-        return not ret['err']
+        return not 'err' in ret
 
     def get(self, key):
         if not key or type(key) is not str:
@@ -313,9 +313,9 @@ class Network(Base):
             self._logger.error("Was object deleted?")
             return None
         res = self._mongo_collection.update({'_id': self._id}, {'$set': {'freelist': freelist}}, multi=False, upsert=False)
-        if res['err']:
+        if 'err' in res:
             self._logger.error("Error while saving list of free IPs: '{}'".format(freelist))
-        return not res['err']
+        return not 'err' in res
  
     def reserve_ip(self, ip1 = None, ip2 = None):
         if type(ip1) is str:

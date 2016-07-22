@@ -123,7 +123,7 @@ class Switch(Base):
             ip = net.reserve_ip(value)
             obj_json['ip'] = ip
             ret = self._mongo_collection.update({'_id': self._id}, {'$set': obj_json}, multi=False, upsert=False)
-            return not ret['err']
+            return not 'err' in ret
         if key == 'network':
             old_net_dbref = obj_json['network']
             old_net = Network(id = old_net_dbref.id, mongo_db = self._mongo_db)
@@ -141,7 +141,7 @@ class Switch(Base):
             ret = self._mongo_collection.update({'_id': self._id}, {'$set': obj_json}, multi=False, upsert=False)
             self.link(new_net)
             self.unlink(old_net)
-            return not ret['err']
+            return not 'err' in ret
         return super(Switch, self).set(key, value)
 
     def delete(self):

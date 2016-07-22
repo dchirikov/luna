@@ -509,4 +509,4 @@ class Base(object):
             self.unlink(link['DBRef'])
         ret = self._mongo_collection.remove({'_id': self._id}, multi=False)
         self._wipe_vars()
-        return not ret['err']
+        return not 'err' in ret
