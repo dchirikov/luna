@@ -112,7 +112,7 @@ class OtherDev(Base):
         obj_json['connected'].pop(str(net.id))
         ret = self._mongo_collection.update({'_id': self._id}, {'$set': obj_json}, multi=False, upsert=False)
         self.unlink(net)
-        return not ret['err']
+        return not 'err' in ret
 
     def list_nets(self):
         obj_json = self._get_json()

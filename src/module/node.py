@@ -175,7 +175,7 @@ class Node(Base):
             self._logger.error("Cannot reserve ip for interface '{}'.".format(interface))
         node_interfaces[interface] = ip
         res = self._mongo_collection.update({'_id': self._id}, {'$set': {'interfaces': node_interfaces}}, multi=False, upsert=False)
-        return not res['err']
+        return not 'err' in res
 
     def del_ip(self, interface = None):
         if not self._id:
@@ -197,7 +197,7 @@ class Node(Base):
                 group._release_ip(iface, ip)
                 mongo_doc.pop(iface)
             res = self._mongo_collection.update({'_id': self._id}, {'$set': {'interfaces': mongo_doc}}, multi=False, upsert=False)
-            return not res['err']
+            return not 'err' in res
         try:
             ip = json['interfaces'][interface]
         except:
@@ -206,7 +206,7 @@ class Node(Base):
         group._release_ip(interface, ip)
         mongo_doc.pop(interface)
         res = self._mongo_collection.update({'_id': self._id}, {'$set': {'interfaces': mongo_doc}}, multi=False, upsert=False)
-        return not res['err']
+        return not 'err' in res
 
     def add_bmc_ip(self, reqip = None):
         if not self._id:
@@ -228,7 +228,7 @@ class Node(Base):
             return None
         mongo_doc = ip
         res = self._mongo_collection.update({'_id': self._id}, {'$set': {'bmcnetwork': mongo_doc}}, multi=False, upsert=False)
-        return not res['err']
+        return not 'err' in res
 
     def del_bmc_ip(self):
         if not self._id:
@@ -245,7 +245,7 @@ class Node(Base):
         if bool(res):
             mongo_doc = None
         res = self._mongo_collection.update({'_id': self._id}, {'$set': {'bmcnetwork': mongo_doc}}, multi=False, upsert=False)
-        return not res['err']
+        return not 'err' in res
 
     def set_mac(self, mac = None):
         import re
@@ -334,7 +334,7 @@ class Node(Base):
         self.del_ip()
         ret = self._mongo_collection.remove({'_id': self._id}, multi=False)
         self._wipe_vars()
-        return not ret['err']
+        return not 'err' in ret
 
     def get_interfaces(self):
         try:
@@ -512,7 +512,7 @@ class Group(Base):
         self.unlink(old_dbref)
         res = self._mongo_collection.update({'_id': self._id}, {'$set': {'osimage': osimage.DBRef}}, multi=False, upsert=False)
         self.link(osimage.DBRef)
-        return not res['err']
+        return not 'err' in res
 
     def bmcsetup(self, bmcsetup_name):
         if not self._id:
@@ -529,7 +529,7 @@ class Group(Base):
             self.link(bmcsetup.DBRef)
         else:
             res = self._mongo_collection.update({'_id': self._id}, {'$set': {'bmcsetup': None}}, multi=False, upsert=False)
-        return not res['err']
+        return not 'err' in res
 
     def set_bmcnetwork(self, bmcnet):
         old_bmcnet_dbref = self._get_json()['bmcnetwork']
@@ -545,7 +545,7 @@ class Group(Base):
                 continue
             node = Node(id=link['DBRef'].id, mongo_db = self._mongo_db)
             node.add_bmc_ip()
-        return not res['err']
+        return not 'err' in res
 
     def del_bmcnetwork(self):
         old_bmcnet_dbref = self._get_json()['bmcnetwork']
@@ -558,7 +558,7 @@ class Group(Base):
                 node.del_bmc_ip()
             self.unlink(old_bmcnet_dbref)
         res = self._mongo_collection.update({'_id': self._id}, {'$set': {'bmcnetwork': None}}, multi=False, upsert=False)
-        return not res['err']
+        return not 'err' in res
 
     
     def show_bmc_if(self, brief = False):
@@ -616,7 +616,7 @@ class Group(Base):
             return None
         interfaces[interface] = {'network': None, 'params': ''}
         res = self._mongo_collection.update({'_id': self._id}, {'$set': {'interfaces': interfaces}}, multi=False, upsert=False)
-        if res['err']:
+        if 'err' in res:
             self._logger.error("Error adding interface '{}'".format(interface))
             return None
         return True
@@ -693,7 +693,7 @@ class Group(Base):
             return None
         interfaces[interface]['params'] = parms
         res = self._mongo_collection.update({'_id': self._id}, {'$set': {'interfaces': interfaces}}, multi=False, upsert=False)
-        if res['err']:
+        if 'err' in res:
             self._logger.error("Error setting network parameters for interface '{}'".format(interface))
             return None
         return True
@@ -719,7 +719,7 @@ class Group(Base):
             return None
         interfaces[interface]['network'] = net.DBRef
         res = self._mongo_collection.update({'_id': self._id}, {'$set': {'interfaces': interfaces}}, multi=False, upsert=False)
-        if res['err']:
+        if 'err' in res:
             self._logger.error("Error adding network for interface '{}'".format(interface))
             return None
         self.link(net.DBRef)
@@ -760,7 +760,7 @@ class Group(Base):
         self.unlink(net_dbref)
         interfaces[interface]['network'] = None
         res = self._mongo_collection.update({'_id': self._id}, {'$set': {'interfaces': interfaces}}, multi=False, upsert=False)
-        if res['err']:
+        if 'err' in res:
             self._logger.error("Error adding network for interface '{}'".format(interface))
             return None
         return True
@@ -773,7 +773,7 @@ class Group(Base):
         interfaces = self._get_json()['interfaces']
         interfaces.pop(interface)
         res = self._mongo_collection.update({'_id': self._id}, {'$set': {'interfaces': interfaces}}, multi=False, upsert=False)
-        if res['err']:
+        if 'err' in res:
             self._logger.error("Error deleting interface '{}'".format(interface))
             return None
         return True
