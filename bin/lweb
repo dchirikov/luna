@@ -32,6 +32,7 @@ import fcntl
 import pwd
 import inspect
 import atexit
+import tornado
 import tornado.ioloop
 import tornado.web
 import tornado.options
@@ -197,10 +198,16 @@ def daemonize():
     formatter = logging.Formatter("%(asctime)s\t%(levelname)s\t%(message)s")
     log_app_handler.setFormatter(formatter)
     logger.addHandler(log_app_handler)
-    tornado.options.options['log_to_stderr'].set(False)
-    tornado.options.options['log_file_prefix'].set(log_dir + '/lweb_tornado.log')
-    tornado.options.options['log_file_max_size'].set(1073741824)
-    tornado.options.options['log_file_num_backups'].set(5)
+    if tornado.version_info[0] > 3:
+        tornado.options.options.log_to_stderr = False
+        tornado.options.options.log_file_prefix = log_dir + '/lweb_tornado.log'
+        tornado.options.options.log_file_max_size = 1073741824
+        tornado.options.options.log_file_num_backups = 5
+    else:
+        tornado.options.options['log_to_stderr'].set(False)
+        tornado.options.options['log_file_prefix'].set(log_dir + '/lweb_tornado.log')
+        tornado.options.options['log_file_max_size'].set(1073741824)
+        tornado.options.options['log_file_num_backups'].set(5)
 
     stdin = '/dev/null'
     stdout = '/dev/null'
@@ -351,7 +358,10 @@ def restart():
 
 if __name__ == '__main__':
     logger = logging.getLogger('lweb')
-    tornado.options.options['log_to_stderr'].set(True)
+    if tornado.version_info[0] > 3:
+        tornado.options.options.log_to_stderr = False
+    else:
+        tornado.options.options['log_to_stderr'].set(True)
     while True:
         try:
             cluster = luna.Cluster()
