@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<service>
+	<short>Luna frontend</short>
+	<description>Luna frontend</description>
+	<port port="7050" protocol="tcp"/>
+</service>

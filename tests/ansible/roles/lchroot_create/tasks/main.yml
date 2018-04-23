@@ -1,0 +1,101 @@
+- name: Create dir for compute osimage
+  file:
+    name: "{{ luna_osimage_path }}"
+    state: directory
+
+- name: Install yum-utils
+  yum:
+    name: yum-utils
+    state: present
+
+- name: Init rpm DB {{ luna_osimage_path }}/var/lib/rpm
+  command: "/usr/bin/rpm --root {{ luna_osimage_path }} --initdb"
+  args:
+    creates: "{{ luna_osimage_path }}/var/lib/rpm"
+
+- name: Install centos-release to {{ luna_osimage_path }}
+  shell: >
+    /usr/bin/yumdownloader --destdir {{ luna_osimage_path }} centos-release &&
+    /usr/bin/rpm --root {{ luna_osimage_path }} -ivh {{ luna_osimage_path }}/centos-release-*.rpm &&
+    /usr/bin/rm -rf {{ luna_osimage_path }}/centos-release-*.rpm
+  args:
+    creates: "{{ luna_osimage_path }}/etc/os-release"
+
+- name: Create {{ luna_osimage_path }}/dev
+  file:
+    path: "{{ luna_osimage_path }}/dev/"
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+
+- name: Create basic /dev files
+  command: "/usr/bin/mknod {{ luna_osimage_path }}/dev/{{ item.dev }} {{ item.t }} {{ item.ma }} {{ item.mi }}"
+  args:
+    creates: "{{ luna_osimage_path }}/dev/{{ item.dev }}"
+  with_items:
+    - { dev: "null",    mo: "666", t: 'c', ma: 1, mi: 3 } # device, mode, type, major, minor
+    - { dev: "zero",    mo: "666", t: 'c', ma: 1, mi: 5 }
+    - { dev: "random",  mo: "666", t: 'c', ma: 1, mi: 8 }
+    - { dev: "urandom", mo: "666", t: 'c', ma: 1, mi: 9 }
+    - { dev: "console", mo: "600", t: 'c', ma: 5, mi: 1 }
+    - { dev: "ptmx",    mo: "666", t: 'c', ma: 5, mi: 2 }
+    - { dev: "tty",     mo: "666", t: 'c', ma: 5, mi: 0 }
+
+- name: Copy local yum.conf
+  copy:
+    src: "/etc/yum.conf"
+    dest: "{{ luna_osimage_path }}/etc/"
+
+- name: Copy yum.conf for chrooted env
+  copy:
+    src: "{{ luna_osimage_path }}/etc/yum.conf"
+    dest: "{{ luna_osimage_path }}/etc/yum-chroot.conf"
+    force: no
+
+- name: Patch yum-chroot.conf
+  lineinfile:
+    dest: "{{ luna_osimage_path }}/etc/yum-chroot.conf"
+    line: "installroot={{ luna_osimage_path }}"
+
+- name: Install Centos group @Base
+  yum:
+    conf_file: "{{ luna_osimage_path }}/etc/yum-chroot.conf"
+    name: "@Base"
+    state: installed
+    disable_gpg_check: yes
+
+- name: Install luna-client
+  yum:
+    conf_file: "{{ luna_osimage_path }}/etc/yum-chroot.conf"
+    name: "luna-client"
+    state: installed
+
+###############################################################################
+
+- name: Cleanup
+  luna_cluster:
+    state: "absent"
+  ignore_errors: true
+
+- name: Create cluster
+  luna_cluster:
+    frontend_address: "{{ luna_frontend_address }}"
+    path: "{{ luna_home }}"
+    state: "present"
+
+###############################################################################
+
+- name: Add osimage
+  luna_osimage:
+    name: "compute"
+    path: "{{ luna_osimage_path }}"
+
+###############################################################################
+
+- name: Change kernver
+  luna_osimage:
+    name: "compute"
+    kernver: '1.0-custom'
+
+###############################################################################

@@ -20,17 +20,23 @@ along with Luna.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
 
-from config import *
-import logging
+from config import usedby_key, db_name, db_version
+
 import os
-import socket
-import subprocess
 import pwd
 import grp
 import errno
-from bson.dbref import DBRef
+import base64
+import logging
+import subprocess
+
+from bson.objectid import ObjectId
+from tornado import template
+from pymongo.errors import OperationFailure
+
 from luna.base import Base
 from luna import utils
+
 
 class Cluster(Base):
     """
@@ -39,9 +45,7 @@ class Cluster(Base):
     """
 
     logging.basicConfig(level=logging.INFO)
-#    logging.basicConfig(level=logging.DEBUG)
-    _logger = logging.getLogger(__name__)
-    _collection_name = None
+    log = logging.getLogger(__name__)
     _mongo_collection = None
     _keylist = None
     _id = None
@@ -49,58 +53,122 @@ class Cluster(Base):
     _DBRef = None
     _json = None
 
-    def __init__(self, mongo_db = None, create = False, id = None, nodeprefix = 'node', nodedigits = 3, path = None, user = None):
+    def __init__(self, mongo_db=None, create=False, id=None,
+                 nodeprefix='node', nodedigits=3, path=None, user=None):
         """
         Constructor can be used for creating object by setting create=True
         nodeprefix='node' and nodedigits='3' will give names like node001,
-        nodeprefix='compute' and nodedigits='4' will give names like compute0001
+        nodeprefix='compute' and nodedigits='2' will give names like compute01
         """
-        self._logger.debug("Arguments to function '{}".format(self._debug_function()))
-        self._logger.debug("Connecting to MongoDB.")
+
+        self.log.debug("function args {}".format(self._debug_function()))
+
         self._collection_name = 'cluster'
-        name = 'general'
-        self._mongo_db = mongo_db
-        mongo_doc = self._check_name(name, mongo_db, create, id)
+        self._keylist = {'nodeprefix': type(''),
+                         'nodedigits': type(0),
+                         'debug': type(0),
+                         'user': type(''),
+                         'path': type(''),
+                         'frontend_address': type(''),
+                         'frontend_port': type(0),
+                         'server_port': type(0),
+                         'tracker_interval': type(0),
+                         'tracker_min_interval': type(0),
+                         'tracker_maxpeers': type(0),
+                         'torrent_listen_port_min': type(0),
+                         'torrent_listen_port_max': type(0),
+                         'torrent_pidfile': type(''),
+                         'lweb_pidfile': type(''),
+                         'lweb_num_proc': type(0),
+                         'cluster_ips': type(''),
+                         'named_include_file': type(''),
+                         'named_zone_dir': type(''),
+                         'dhcp_range_start': long,
+                         'dhcp_range_end': long,
+                         'dhcp_net': type(''),
+                         'comment': type(''),
+                         'frontend_https': type(True)}
+
+        cluster = self._get_object('general', mongo_db, create, id)
+
+        if cluster and cluster.get('db_version') != db_version:
+            err_msg = "DB version mismatch. Expecting {}".format(db_version)
+            self.log.error(err_msg)
+            raise RuntimeError, err_msg
+
         if create:
             try:
-                path =  os.path.abspath(path)
+                path = os.path.abspath(path)
             except:
-                self._logger.error("No path specified.")
-                raise RuntimeError
+                err_msg = "No path specified."
+                self._logger.error(err_msg)
+                raise RuntimeError, err_msg
             if not os.path.exists(path):
-                self._logger.error("Wrong path '{}' specified.".format(path))
-                raise RuntimeError
+                err_msg = "Wrong path '{}' specified.".format(path)
+                self._logger.error(err_msg)
+                raise RuntimeError, err_msg
+
             try:
                 user_id = pwd.getpwnam(user)
-            except:
-                self._logger.error("No such user '{}' exists.".format(user))
-                raise RuntimeError
+            except KeyError:
+                err_msg = "No such user '{}' exists.".format(user)
+                self.log.error(err_msg)
+                raise RuntimeError, err_msg
+
             try:
                 group = grp.getgrgid(user_id.pw_gid).gr_name
                 group_id = grp.getgrnam(group)
-            except:
-                self._logger.error("No such group '{}' exists.".format(group))
-                raise RuntimeError
+            except KeyError:
+                err_msg = "No such group '{}' exists.".format(group)
+                self.log.error(err_msg)
+                raise RuntimeError, err_msg
+
             path_stat = os.stat(path)
-            if path_stat.st_uid != user_id.pw_uid or path_stat.st_gid != group_id.gr_gid:
-                self._logger.error("Path is not owned by '{}:{}'".format(user, group))
-                raise RuntimeError
-            mongo_doc = {'name': name, 'nodeprefix': nodeprefix, 'nodedigits': nodedigits, 'user': user,
-                        'debug': 0, 'path': path, 'frontend_address': '', 'frontend_port': '7050',
-                        'server_port': 7051, 'tracker_interval': 10,
-                        'tracker_min_interval': 5, 'tracker_maxpeers': 200,
-                        'torrent_listen_port_min': 7052, 'torrent_listen_port_max': 7200, 'torrent_pidfile': '/run/luna/ltorrent.pid',
-                        'lweb_pidfile': '/run/luna/lweb.pid', 'lweb_num_proc': 0, 'cluster_ips': None,
-                        'named_include_file': '/etc/named.luna.zones', 'named_zone_dir': '/var/named',
-                        'dhcp_range_start': None, 'dhcp_range_end': None, 'dhcp_net': None}
-            self._logger.debug("mongo_doc: '{}'".format(mongo_doc))
-            self._name = name
-            self._id = self._mongo_collection.insert(mongo_doc)
-            self._DBRef = DBRef(self._collection_name, self._id)
+
+            if (path_stat.st_uid != user_id.pw_uid or
+                    path_stat.st_gid != group_id.gr_gid):
+
+                err_msg = "Path is not owned by '{}:{}'".format(user, group)
+                self.log.error(err_msg)
+                raise RuntimeError, err_msg
+
+            cluster = {'name': 'general',
+                       'nodeprefix': nodeprefix,
+                       'nodedigits': nodedigits,
+                       'user': user, 'debug': 0,
+                       'path': path,
+                       'cluster_ips': None,
+                       'frontend_address': '',
+                       'frontend_port': '7050',
+                       'server_port': 7051,
+                       'torrent_listen_port_min': 7052,
+                       'torrent_listen_port_max': 7200,
+                       'torrent_pidfile': '/run/luna/ltorrent.pid',
+                       'tracker_interval': 10,
+                       'tracker_min_interval': 5,
+                       'tracker_maxpeers': 200,
+                       'lweb_num_proc': 0,
+                       'lweb_pidfile': '/run/luna/lweb.pid',
+                       'named_include_file': '/etc/named.luna.zones',
+                       'named_zone_dir': '/var/named',
+                       'dhcp_range_start': None,
+                       'dhcp_range_end': None,
+                       'dhcp_net': None,
+                       'db_version': db_version,
+                       'comment': None,
+                       'frontend_https': False,
+                       }
+
+            self.log.debug("Saving cluster '{}' to the datastore"
+                           .format(cluster))
+
+            self.store(cluster)
+
             try:
                 logdir = os.environ['LUNA_LOGDIR']
             except KeyError:
                 logdir = '/var/log/luna'
+
             try:
                 os.makedirs(logdir)
             except OSError as exc:
@@ -108,193 +176,262 @@ class Cluster(Base):
                     pass
                 else:
                     raise
+
             os.chown(logdir, user_id.pw_uid, group_id.gr_gid)
-        else:
-            self._name = mongo_doc['name']
-            self._id = mongo_doc['_id']
-            self._DBRef = DBRef(self._collection_name, self._id)
-        self._keylist = {'nodeprefix': type(''), 'nodedigits': type(0), 'debug': type(0), 'user': type(''),
-                        'path': type(''), 'frontend_address': type(''), 'frontend_port': type(0),
-                        'server_port': type(0), 'tracker_interval': type(0),
-                        'tracker_min_interval': type(0), 'tracker_maxpeers': type(0),
-                        'torrent_listen_port_min': type(0), 'torrent_listen_port_max': type(0), 'torrent_pidfile': type(''),
-                        'lweb_pidfile': type(''), 'lweb_num_proc': type(0),
-                        'cluster_ips': type(''), 'named_include_file': type(''), 'named_zone_dir': type(''),
-                        'dhcp_range_start': long, 'dhcp_range_end': long, 'dhcp_net': type('')}
-
-        self._logger.debug("Current instance:'{}".format(self._debug_instance()))
-
-    def __getattr__(self, key):
-        try:
-            self._keylist[key]
-        except:
-            raise AttributeError()
-        return self.get(key)
-
-    def __setattr__(self, key, value):
-        try:
-            self._keylist[key]
-            self.set(key, value)
-        except:
-            self.__dict__[key] = value
 
     def get(self, key):
+        from luna.network import Network
+
         if key == 'dhcp_net':
-            from luna.network import Network
-            from bson.objectid import ObjectId
             netid = super(Cluster, self).get(key)
-            if not bool(netid):
+            if not netid:
                 return None
-            net = Network(id = ObjectId(netid), mongo_db = self._mongo_db)
+
+            net = Network(id=ObjectId(netid), mongo_db=self._mongo_db)
             try:
-                net = Network(id = ObjectId(netid), mongo_db = self._mongo_db)
+                net = Network(id=ObjectId(netid), mongo_db=self._mongo_db)
                 return net.name
             except:
-                self._logger.error('Wrong DHCP network configured')
+                self.log.error('Wrong DHCP network configured')
                 return None
+
         if key == 'dhcp_range_start' or key == 'dhcp_range_end':
-            from luna.network import Network
-            from bson.objectid import ObjectId
             netid = super(Cluster, self).get('dhcp_net')
-            if not bool(netid):
+            if not netid:
                 return None
-            net = Network(id = ObjectId(netid), mongo_db = self._mongo_db)
-            return utils.ip.reltoa(net._get_json()['NETWORK'], super(Cluster, self).get(key))
+
+            net = Network(id=ObjectId(netid), mongo_db=self._mongo_db)
+            return utils.ip.reltoa(net._json['NETWORK'],
+                                   super(Cluster, self).get(key),
+                                   ver=net.version)
 
         return super(Cluster, self).get(key)
 
     def set(self, key, value):
-        from luna.network import Network
-        from bson.objectid import ObjectId
         if key == 'path':
             try:
-                value =  os.path.abspath(value)
+                value = os.path.abspath(value)
             except:
-                self._logger.error("No path specified.")
-                return None
+                self.log.error("No path specified.")
+                return False
             if not os.path.exists(value):
-                self._logger.error("Wrong path specified.")
-                return None
-            return super(Cluster, self).set(key, value)
-        if key in ['server_address', 'tracker_address']:
+                self.log.error("Wrong path specified.")
+                return False
+
+        elif key in ['server_address', 'tracker_address']:
             try:
-                socket.inet_aton(value)
+                utils.ip.aton(value)
             except:
-                self._logger.error("Wrong ip address specified.")
-                return None
-            return super(Cluster, self).set(key, value)
-        if key == 'user':
+                self.log.error("Wrong ip address specified.")
+                return False
+
+        elif key == 'user':
             try:
                 pwd.getpwnam(value)
             except:
-                self._logger.error("No such user exists.")
-                return None
-        if key == 'cluster_ips':
-            val = ''
-            for ip in value.split(","):
-                try:
-                    socket.inet_aton(ip.strip())
-                except:
-                    self._logger.error("Wrong ip address specified.")
-                    return None
-                val += ip + ','
-            val = val[:-1]
-            ips = val.split(',')
-            return super(Cluster, self).set(key, val)
+                self.log.error("No such user exists.")
+                return False
+
+        elif key == 'cluster_ips':
+            if not bool(value):
+                value = ''
+            else:
+                val = ''
+                for ip in value.split(","):
+                    try:
+                        utils.ip.aton(ip.strip())
+                        val += ip + ','
+                    except:
+                        self.log.error("Wrong ip address specified.")
+                        return False
+
+                value = val[:-1]
+
         return super(Cluster, self).set(key, value)
 
-    def makedhcp(self, netname, startip, endip, no_ha = False):
-        from luna.network import Network
-        from bson.objectid import ObjectId
-        try:
-            if bool(netname):
-                objnet = Network(name = netname, mongo_db = self._mongo_db)
-        except:
-            ojbnet = None
-        if not bool(objnet):
-            self._logger.error("Proper DHCP network should be specified.")
-            return None
-        if not bool(startip) or not bool(endip):
-            self._logger.error("First and last IPs of range should be specified.")
-            return None
-        if not bool(self.get_cluster_ips()):
-            no_ha = True
+    def makedhcp_config(self, net_name=None, start_ip=None, end_ip=None):
 
-        n = objnet._get_json()
-        startip = utils.ip.atorel(startip, n['NETWORK'], n['PREFIX'])
-        endip = utils.ip.atorel(endip, n['NETWORK'], n['PREFIX'])
-        if not bool(startip) or not bool(endip):
-            self._logger.error("Error in acquiring IPs.")
-            return None
-        obj_json = self._get_json()
-        (oldnetid, oldstartip, oldendip) = (None, None, None)
-        try:
-            oldnetid = obj_json['dhcp_net']
-            oldstartip = obj_json['dhcp_range_start']
-            oldendip = obj_json['dhcp_range_end']
-        except:
-            (oldnetid, oldstartip, oldendip) = (None, None, None)
-        if str(oldnetid) == str(objnet.id):
-            objnet.release_ip(oldstartip, oldendip)
-            self.unlink(objnet)
-            (oldnetid, oldstartip, oldendip) = (None, None, None)
-        res = objnet.reserve_ip(startip, endip)
-        if not bool(res):
-            self._logger.error("Cannot reserve IP range for DHCP.")
-        super(Cluster, self).set('dhcp_net', str(objnet.id))
-        super(Cluster, self).set('dhcp_range_start', startip)
-        super(Cluster, self).set('dhcp_range_end', endip)
-        self.link(objnet)
-        if bool(oldnetid) and bool(oldstartip) and bool(oldendip):
-            oldnet_obj = Network(id = ObjectId(oldnetid), mongo_db = self._mongo_db)
-            self.unlink(oldnet_obj)
-            oldnet_obj.release_ip(oldstartip, oldendip)
-        self._create_dhcp_config(no_ha)
-        return True
-
-    def _create_dhcp_config(self, no_ha):
         from luna.network import Network
-        from bson.objectid import ObjectId
-        from tornado import template
-        import os, base64
+
+        if net_name and not (start_ip and end_ip):
+            self.log.error("IP range should be specified.")
+            return {}
+
+        old_net_name = self.get('dhcp_net')
+
+        if not (old_net_name or net_name):
+            self.log.error("DHCP network should be specified.")
+            return {}
+
+        frontend_address = self.get('frontend_address')
+        if not frontend_address:
+            self.log.error("Frontend address should be set.")
+            return {}
+
+        net_obj = None
+        start_ip_num, end_ip_num = None, None
+
+        if net_name:
+            net_obj = Network(name=net_name, mongo_db=self._mongo_db)
+
+            if net_obj.version != 4:
+                self.log.error("Only IPv4 networks are supported.")
+                return {}
+
+            start_ip_num = None
+            frontend_address_num = None
+            end_ip_num = None
+            try:
+                start_ip_num = utils.ip.atorel(
+                    start_ip, net_obj._json['NETWORK'],
+                    net_obj._json['PREFIX'])
+
+                frontend_address_num = utils.ip.atorel(
+                    frontend_address, net_obj._json['NETWORK'],
+                    net_obj._json['PREFIX'])
+
+                end_ip_num = utils.ip.atorel(
+                    end_ip, net_obj._json['NETWORK'],
+                    net_obj._json['PREFIX'])
+
+            except RuntimeError:
+                # utils.ip will print error messages
+                pass
+
+            if not start_ip_num:
+                self.log.error(
+                    'Start of the range does not belong to network.')
+                return {}
+
+            if not start_ip_num:
+                self.log.error(
+                    'End of the range does not belong to network.')
+                return {}
+
+            if not frontend_address_num:
+                self.log.error(
+                    'Frontend IP does not belong to network.')
+                return {}
+
+            if end_ip_num < start_ip_num:
+                self.log.error(
+                    'End IP of the range should be larger than start.')
+                return {}
+
+        old_net_obj = None
+        old_start_ip = None
+        old_end_ip = None
+
+        if old_net_name and net_name:
+            # release old range
+            old_net_obj = Network(name=old_net_name, mongo_db=self._mongo_db)
+            old_start_ip = self.get('dhcp_range_start')
+            old_end_ip = self.get('dhcp_range_end')
+
+            res = old_net_obj.release_ip(old_start_ip, old_end_ip)
+
+            if not res:
+                self.log.error('Unable to release old range.')
+                return {}
+
+            self.unlink(old_net_obj)
+
+        if net_name:
+            # now try to reserve new range
+            net_obj = Network(name=net_name, mongo_db=self._mongo_db)
+            res = net_obj.reserve_ip(start_ip_num, end_ip_num)
+            if not res:
+                if old_net_obj:
+                    # need to rolback
+                    old_net_obj.reserve_ip(old_start_ip, old_end_ip)
+                self.log.error('Unable to reserve new range.')
+                return {}
+
+            super(Cluster, self).set('dhcp_net', str(net_obj.id))
+            super(Cluster, self).set('dhcp_range_start', start_ip_num)
+            super(Cluster, self).set('dhcp_range_end', end_ip_num)
+            self.link(net_obj)
+
+        # get actual options
         c = {}
-        conf_primary = {}
-        conf_secondary = {}
 
-        if self.is_ha() and not no_ha:
-            cluster_ips = self.get_cluster_ips()
-            conf_primary['my_addr'] = cluster_ips[0]
-            conf_secondary['my_addr'] = cluster_ips[1]
-            conf_primary['peer_addr'] = conf_secondary['my_addr']
-            conf_secondary['peer_addr'] = conf_primary['my_addr']
+        if self.get('frontend_https'):
+            c['protocol'] = 'https'
+        else:
+            c['protocol'] = 'http'
 
         c['frontend_ip'] = self.get('frontend_address')
         c['dhcp_start'] = self.get('dhcp_range_start')
         c['dhcp_end'] = self.get('dhcp_range_end')
         c['frontend_port'] = self.get('frontend_port')
         netname = self.get('dhcp_net')
-        objnet = Network(name = netname, mongo_db = self._mongo_db)
-        c['NETMASK'] = objnet.get('NETMASK')
-        c['NETWORK'] = objnet.get('NETWORK')
-        c['hmac_key'] = str(base64.b64encode(bytearray(os.urandom(32))).decode())
+        objnet = Network(name=netname, mongo_db=self._mongo_db)
+        c['netmask'] = objnet.get('NETMASK')
+        c['network'] = objnet.get('NETWORK')
+
+        c['hmac_key'] = str(
+            base64.b64encode(bytearray(os.urandom(32))).decode()
+        )
+
+        c['reservations'] = objnet.get_ip_macs()
+
+        return c
+
+    def makedhcp(self, net_name=None, start_ip=None, end_ip=None, no_ha=False):
+
+        ask_ha = not no_ha
+
+        c = self.makedhcp_config(net_name, start_ip, end_ip)
+        if not c:
+            self.log.error('Unable to create DHCP config')
+            return False
+
+        conf_primary = {}
+        conf_secondary = {}
+
         tloader = template.Loader(self.get('path') + '/templates')
-        if self.is_ha() and not no_ha:
-            dhcpd_conf_primary = tloader.load('templ_dhcpd.cfg').generate(c = c, conf_primary = conf_primary, conf_secondary = None)
-            dhcpd_conf_secondary = tloader.load('templ_dhcpd.cfg').generate(c = c, conf_primary = None, conf_secondary = conf_secondary)
+
+        if self.is_ha() and ask_ha:
+
+            # native dhcp config
+
+            cluster_ips = self.get_cluster_ips()
+            conf_primary['my_addr'] = cluster_ips[0]
+            conf_secondary['my_addr'] = cluster_ips[1]
+            conf_primary['peer_addr'] = conf_secondary['my_addr']
+            conf_secondary['peer_addr'] = conf_primary['my_addr']
+
+            dhcpd_conf_primary = tloader.load('templ_dhcpd.cfg').generate(
+                c=c, conf_primary=conf_primary,
+                conf_secondary=None)
+
+            dhcpd_conf_secondary = tloader.load('templ_dhcpd.cfg').generate(
+                c=c, conf_primary=None,
+                conf_secondary=conf_secondary)
+
             f1 = open('/etc/dhcp/dhcpd.conf', 'w')
-            f2 = open('/etc/dhcp/dhcpd-secondary.conf', 'w')
             f1.write(dhcpd_conf_primary)
-            f2.write(dhcpd_conf_secondary)
             f1.close()
-            f2.close()
-        else:
-            dhcpd_conf = tloader.load('templ_dhcpd.cfg').generate(c = c, conf_primary = None, conf_secondary = None)
-            f1 = open('/etc/dhcp/dhcpd.conf', 'w')
+
             f2 = open('/etc/dhcp/dhcpd-secondary.conf', 'w')
-            f1.write(dhcpd_conf)
-            f2.write(dhcpd_conf)
-            f1.close()
+            f2.write(dhcpd_conf_secondary)
             f2.close()
+
+            return True
+
+        dhcpd_conf = tloader.load('templ_dhcpd.cfg').generate(
+            c=c, conf_primary=None, conf_secondary=None)
+
+        f1 = open('/etc/dhcp/dhcpd.conf', 'w')
+        f1.write(dhcpd_conf)
+        f1.close()
+
+        if self.is_ha():
+            # dhcpd-secondary.conf is just a copy of dhcpd.conf
+            f2 = open('/etc/dhcp/dhcpd-secondary.conf', 'w')
+            f2.write(dhcpd_conf)
+            f2.close()
+
         return True
 
     def get_cluster_ips(self):
@@ -302,20 +439,22 @@ class Cluster(Base):
         ips = self.get('cluster_ips')
 
         if ips == '':
-            self._logger.info('No cluster IPs are configured.')
+            self.log.debug('No cluster IPs are configured.')
             return cluster_ips
 
         ips = ips.split(",")
 
         local_ip = ''
         for ip in ips:
-            stdout = subprocess.Popen(['/usr/sbin/ip', 'addr', 'show', 'to', ip], stdout=subprocess.PIPE).stdout.read()
+            stdout = subprocess.Popen(['/usr/sbin/ip', 'addr',
+                                       'show', 'to', ip],
+                                      stdout=subprocess.PIPE).stdout.read()
             if not stdout == '':
                 local_ip = ip
                 break
 
-        if not bool(local_ip):
-            self._logger.info('No proper cluster IPs are configured.')
+        if not local_ip:
+            self.log.info('No proper cluster IPs are configured.')
             return cluster_ips
 
         cluster_ips.append(local_ip)
@@ -328,15 +467,19 @@ class Cluster(Base):
     def is_active(self):
         cluster_ips = self.get('cluster_ips')
 
-        if not bool(cluster_ips):
+        if not cluster_ips:
             return True
 
         ip = self.get('frontend_address')
         if not ip:
             return True
-        stdout = subprocess.Popen(['/usr/sbin/ip', 'addr', 'show', 'to', ip], stdout=subprocess.PIPE).stdout.read()
+
+        stdout = subprocess.Popen(['/usr/sbin/ip', 'addr',
+                                   'show', 'to', ip],
+                                  stdout=subprocess.PIPE).stdout.read()
         if stdout:
             return True
+
         return False
 
     def is_ha(self):
@@ -344,127 +487,278 @@ class Cluster(Base):
             cluster_ips = self.get('cluster_ips')
         except:
             return False
-        if bool(cluster_ips):
+
+        if cluster_ips:
             return True
         return False
 
     def makedns(self):
         from luna.network import Network
-        from bson.objectid import ObjectId
-        from tornado import template
-        import pwd
-        import grp
-        import os
-
-        # get network _id configured for cluster
-        obj_json = self._get_json()
-        try:
-            rev_links = obj_json[usedby_key]
-        except:
-            self._logger.error("No IP addresses for network '{}' configured.".format(self.name))
-            return None
-        netids = []
-        for elem in rev_links:
-            if elem == 'network':
-                for netid in rev_links[elem]:
-                    netids.extend([netid])
-
-        # fill network dictionary {'netname': {'ns_hostname': 'servername', 'ns_ip': 'IP', 'hosts' {'name': 'IP'}}}
-        networks = {}
-        for netid in netids:
-            netobj = Network(id = ObjectId(netid))
-            networks[netobj.name] = {}
-            master_ip = netobj.get('ns_ip')
-            networks[netobj.name]['ns_hostname'] = netobj.get('ns_hostname')
-            networks[netobj.name]['ns_ip'] = master_ip
-            networks[netobj.name]['hosts'] = netobj.resolve_used_ips()
-            # some inout for reverse zones
-            # here is steps to figure out which octets in ipadresses are common for all ips in network.
-            # we can not rely on mask here, as mask can not be devisible by 8 (/12, /15, /21, etc)
-            arr1 = [int(elem) for elem in master_ip.split('.')]
-            logical_arr1 = [True, True, True, True]
-            for host in networks[netobj.name]['hosts']:
-                ip = networks[netobj.name]['hosts'][host]
-                arr2 = [int(elem) for elem in ip.split('.')]
-                logical_arr = [ bool(arr1[n] == arr2[n]) for n in range(len(arr1))]
-                logical_arr2 = [logical_arr[n] & logical_arr1[n] for n in range(len(logical_arr))]
-                arr1 = arr2[:]
-                logical_arr1 = logical_arr2[:]
-            # get fist octet in ip adresses which is changing
-            try:
-                mutable_octet = [i for i in range(len(logical_arr1)) if not logical_arr1[i]][0]
-            except IndexError:
-                mutable_octet = 3
-            # generate zone file name
-            revzonename = '.'.join(list(reversed(master_ip.split('.')[:mutable_octet]))) + ".in-addr.arpa"
-            networks[netobj.name]['mutable_octet'] = mutable_octet
-            networks[netobj.name]['rev_zone_name'] = revzonename
 
         # figure out paths
         includefile = self.get('named_include_file')
         zonedir = self.get('named_zone_dir')
-        if not includefile:
-            self._logger.error("named_include_file should be configured")
-            return None
-        if not zonedir:
-            self._logger.error("named_zone_dir should be configured")
-            return None
 
-        # load templates
-        tloader = template.Loader(self.get('path') + '/templates')
+        if not includefile:
+            self.log.error("named_include_file should be configured")
+            return False
+        if not zonedir:
+            self.log.error("named_zone_dir should be configured")
+            return False
+
+        rlinks = self.get(usedby_key)
+        if not rlinks or 'network' not in rlinks or not rlinks['network']:
+            self.log.error("No networks configured in this cluster")
+            return False
+
+        netids = []
+        for netid in rlinks['network']:
+            netids.append(netid)
+
+        zone_data = {
+            4: {'direct': {}, 'reverse': {}},
+            6: {'direct': {}, 'reverse': {}}
+        }
+        serial_num = 1
+
+        for netid in netids:
+            netobj = Network(id=ObjectId(netid))
+            self.log.debug('Network {}'. format(netobj.name))
+            net_zone_data = netobj.zone_data
+            self.log.debug('net_zone_data: {}'.format(zone_data))
+            rev_zone_name = net_zone_data.pop('rev_zone_name')
+            rev_zone_hosts = net_zone_data.pop('rev_hosts')
+            include = net_zone_data['include']
+            rev_include = net_zone_data['rev_include']
+            direct_name = net_zone_data.pop('zone_name')
+            version = net_zone_data.pop('version')
+            ns_hostname = net_zone_data.pop('ns_hostname')
+            ns_hostname += '.' + direct_name
+
+            # It 10.1.0.0/16 and 10.1.128.0/18 will give
+            # the same reverse zone 1.10.in-addr.arpa
+            # so we need to combine to the single one
+
+            if rev_zone_name in zone_data[version]['reverse']:
+
+                old_rev_zone = zone_data[version]['reverse'][rev_zone_name]
+                old_rev_hosts = old_rev_zone['hosts'].copy()
+
+                for rev_host in rev_zone_hosts:
+                    if rev_host in old_rev_hosts:
+                        self.log.error(
+                            "Duplicate records for {}.{}.*.arpa: {} and {}"
+                            .format(
+                                rev_host,
+                                rev_zone_name,
+                                old_rev_hosts[rev_host],
+                                rev_zone_hosts[rev_host],
+                            )
+                        )
+                    old_rev_hosts[rev_host] = rev_zone_hosts[rev_host]
+
+                (zone_data[version]
+                          ['reverse']
+                          [rev_zone_name]
+                          ['include']) += rev_include
+
+                (zone_data[version]
+                          ['reverse']
+                          [rev_zone_name]
+                          ['hosts']) = old_rev_hosts
+
+            if rev_zone_name not in zone_data[version]['reverse']:
+                rev_zone_dict = {
+                    'hosts': rev_zone_hosts,
+                    'ns_hostname': ns_hostname,
+                    'serial': serial_num,
+                    'include': rev_include,
+                }
+                zone_data[version]['reverse'][rev_zone_name] = rev_zone_dict
+
+            direct_zone_dict = {
+                'hosts': net_zone_data['hosts'].copy(),
+                'ns_ip': net_zone_data['ns_ip'],
+                'ns_hostname': ns_hostname,
+                'serial': serial_num,
+                'include': include,
+            }
+            zone_data[version]['direct'][direct_name] = direct_zone_dict
+
+        self.log.debug('zone_data: {}'.format(zone_data))
+
+        zones = []
+        fsuffix = '.luna.zone'
+
+        for name4 in zone_data[4]['direct']:
+            zone = {}
+            zone['template'] = 'templ_zone_ipv4.cfg'
+            zone['name'] = name4
+            zone['file'] = zone['name'] + fsuffix
+            zone['data'] = zone_data[4]['direct'][name4]
+            zones.append(zone)
+
+        for name6 in zone_data[6]['direct']:
+            zone = {}
+            zone['template'] = 'templ_zone_ipv6.cfg'
+            zone['name'] = name6
+            zone['file'] = zone['name'] + fsuffix
+            zone['data'] = zone_data[6]['direct'][name6]
+            zones.append(zone)
+
+        for rev_name4 in zone_data[4]['reverse']:
+            zone = {}
+            zone['template'] = 'templ_zone_ipv4_arpa.cfg'
+            zone['name'] = rev_name4 + '.in-addr.arpa'
+            zone['file'] = zone['name'] + fsuffix
+            zone['data'] = zone_data[4]['reverse'][rev_name4]
+            zones.append(zone)
+
+        for rev_name6 in zone_data[6]['reverse']:
+            zone = {}
+            zone['template'] = 'templ_zone_ipv6_arpa.cfg'
+            zone['name'] = rev_name6 + '.ip6.arpa'
+            zone['file'] = zone['name'] + fsuffix
+            zone['data'] = zone_data[6]['reverse'][rev_name6]
+            zones.append(zone)
+
+        tloader = template.Loader(self.get('path') + '/templates',
+                                  autoescape=None)
 
         # create include file for named.conf
         namedconffile = open(includefile, 'w')
-        zonenames = []
-        for network in networks:
-            zonenames.extend([network, networks[network]['rev_zone_name']])
 
-        namedconffile.write(tloader.load('templ_named_conf.cfg').generate(networks = zonenames))
+        namedconffile.write(
+            tloader.load('templ_named_conf.cfg').generate(z=zones)
+        )
+
         namedconffile.close()
-        nameduid = pwd.getpwnam("named").pw_uid
-        namedgid = grp.getgrnam("named").gr_gid
-        os.chown(includefile, 0, namedgid)
-        self._logger.info("Created '{}'".format(includefile))
+
+        nameduid, namedgid = None, None
+
+        try:
+            namedgid = grp.getgrnam("named").gr_gid
+        except KeyError:
+            self.log.error("Unable to find group 'named'")
+
+        try:
+            nameduid = pwd.getpwnam("named").pw_uid
+        except KeyError:
+            self.log.error("Unable to find user 'named'")
+
+        if namedgid:
+            os.chown(includefile, 0, namedgid)
+        else:
+            self.log.error('Unable to set group for {}'.format(includefile))
+
+        self.log.info("Created '{}'".format(includefile))
 
         # remove zone files
-        filelist = [ f for f in os.listdir(zonedir) if f.endswith(".luna.zone") ]
+        filelist = [f for f in os.listdir(zonedir) if f.endswith(fsuffix)]
         for f in filelist:
             filepath = zonedir + "/" + f
             try:
                 os.remove(filepath)
-                self._logger.info("Removed old '{}'".format(filepath))
+                self.log.info("Removed old '{}'".format(filepath))
             except:
-                self._logger.info("Unable to remove '{}'".format(filepath))
-        # create zone files
-        for network in networks:
-            # create zone
-            z = {}
-            z['master_hostname'] = networks[network]['ns_hostname']
-            z['master_ip'] = networks[network]['ns_ip']
-            z['serial_num'] = 1
-            z['hosts'] = networks[network]['hosts']
-            zonefilepath = zonedir + "/" + network + ".luna.zone"
-            zonefile = open(zonefilepath, 'w')
-            zonefile.write(tloader.load('templ_zone.cfg').generate(z = z))
-            zonefile.close()
-            os.chown(zonefilepath, nameduid, namedgid)
-            self._logger.info("Created '{}'".format(zonefilepath))
-            revzonepath = zonedir + "/" + networks[network]['rev_zone_name'] + ".luna.zone"
-            z['master_hostname'] = networks[network]['ns_hostname'] + "." + network
-            z['hosts'] = {}
-            for host in networks[network]['hosts']:
-                hostname = host + "." + network
-                iparr = [int(elem) for elem in networks[network]['hosts'][host].split('.')]
-                reverseiplist = list(reversed(iparr[networks[network]['mutable_octet']:]))
-                reverseip = '.'.join([str(elem) for elem in reverseiplist])
-                z['hosts'][hostname] = reverseip
-            zonefile = open(revzonepath, 'w')
-            zonefile.write(tloader.load('templ_zone_arpa.cfg').generate(z = z))
-            zonefile.close()
-            os.chown(revzonepath, nameduid, namedgid)
-            self._logger.info("Created '{}'".format(revzonepath))
+                self.log.info("Unable to remove '{}'".format(filepath))
+
+        for zone in zones:
+            zonefilepath = zonedir + "/" + zone['file']
+
+            with open(zonefilepath, 'w') as zonefile:
+                zonefile.write(
+                    tloader.load(zone['template']).generate(z=zone['data'])
+                )
+
+            if nameduid and namedgid:
+                os.chown(zonefilepath, nameduid, namedgid)
+            else:
+                self.log.error('Unable to set ownership for {}'
+                    .format(zone['file'])
+                )
+
+            self.log.info("Created '{}'".format(zonefilepath))
+
         return True
 
+    def delete(self, force=False):
 
+        if force:
+            # this will return None
+            self._mongo_db.connection.drop_database(db_name)
+            try:
+                if db_name in self._mongo_db.connection.database_names():
+                    self.log.error('Unable to delete DB \'{}\''.format(db_name))
+                    return False
+            except OperationFailure:
+                return True
+            return True
 
+        return super(Cluster, self).delete()
 
+    def list_cached_macs(self):
+        from luna.switch import Switch
+        from luna.node import Node
+        cached_macs = utils.helpers.list_cached_macs(mongo_db=self._mongo_db)
+
+        rlinks = self.get(usedby_key)
+        if not rlinks or 'switch' not in rlinks or not rlinks['switch']:
+            self.log.error("No switches configured in this cluster")
+            return False
+
+        switchids = {}
+        switchnames = {}
+        for switchid in rlinks['switch']:
+            sw = Switch(id=ObjectId(switchid), mongo_db=self._mongo_db)
+            switchids[switchid] = sw.name
+            switchnames[sw.name] = switchid
+
+        nodeids_macs = utils.helpers.list_node_macs(mongo_db=self._mongo_db)
+        macs_nodenames = {}
+
+        for nodeid in nodeids_macs:
+            node = Node(id=ObjectId(nodeid), mongo_db=self._mongo_db)
+            macs_nodenames[nodeids_macs[nodeid]] = {
+                'name': node.name,
+                'switch_id': node.get('switch'),
+                'port': node.get('port'),
+            }
+
+        swlist = switchnames.keys()
+        swlist.sort()
+
+        for i in range(len(cached_macs)):
+            swid = str(cached_macs[i]['switch_id'])
+            cached_macs[i]['switch'] = switchids[swid]
+            if cached_macs[i]['mac'] in macs_nodenames:
+                node = macs_nodenames[cached_macs[i]['mac']]
+                nodename = node['name']
+
+                if ((cached_macs[i]['port'] == node['port'] or
+                        cached_macs[i]['portname'] == node['port']) and
+                        node['switch_id'] and
+                        cached_macs[i]['switch_id'] == node['switch_id'].id):
+                    cached_macs[i]['configured'] = True
+                else:
+                    cached_macs[i]['configured'] = False
+
+                cached_macs[i]['node'] = nodename
+            else:
+                cached_macs[i]['node'] = None
+                cached_macs[i]['configured'] = False
+            cached_macs[i].pop('_id')
+            cached_macs[i].pop('switch_id')
+            cached_macs[i].pop('updated')
+
+        res = sorted(
+            cached_macs,
+            key=lambda x: (x['switch'],
+                           int(x['port']),
+                           x['portname'],
+                           x['mac'],
+                           x['node'],
+                           )
+        )
+
+        return res

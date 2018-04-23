@@ -1,0 +1,8 @@
+---
+- hosts: localhost
+  roles:
+  - role: node_create
+    tags: create
+
+  - role: node_options
+    tags: options

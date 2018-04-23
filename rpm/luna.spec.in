@@ -1,0 +1,460 @@
+Name: luna
+Version: __VERSION__
+%define build_ver __BUILD__
+Release: %{build_ver}%{?dist}
+
+Summary: Luna is a baremetal provisioning tool uses image-based approach
+Packager: ClusterVision
+License: GNU GPLv3
+
+Source: https://github.com/clustervision/%{name}/archive/v%{version}-%{build_ver}.tar.gz
+URL: https://github.com/clustervision/luna
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{build_ver}
+
+# ///////////////////////////////////////////////
+# INTERNAL LUNA DEFINITION
+# ///////////////////////////////////////////////
+%define luna_home /opt/luna
+%define luna_group luna
+%define luna_user luna
+%define dracut_dir /usr/lib/dracut/modules.d
+
+# ///////////////////////////////////////////////
+# RPMBUILD DEFINITION
+# ///////////////////////////////////////////////
+# Disable debuginfo package
+%define debug_package %{nil}
+
+# ///////////////////////////////////////////////
+# BUILD REQUIREMENTS
+# ///////////////////////////////////////////////
+BuildRequires: bash
+BuildRequires: sed
+BuildRequires: python
+BuildRequires: python-docutils
+BuildRequires: gcc-c++
+BuildRequires: rb_libtorrent-devel
+BuildRequires: boost-devel
+BuildRequires: systemd-units
+BuildRequires: selinux-policy-devel
+
+# ///////////////////////////////////////////////
+# INSTALL REQUIREMENTS
+# ///////////////////////////////////////////////
+Requires: nginx
+Requires: mongodb-server >= 2.6, mongodb-server < 3.0
+Requires: python-pymongo >= 2.5, python-pymongo < 3.0
+Requires: mongodb >= 2.6, mongodb < 3.0
+Requires: python-tornado >= 2.2, python-tornado < 4.3
+Requires: ipxe-bootimgs
+Requires: tftp-server
+Requires: xinetd
+Requires: dhcp
+Requires: rb_libtorrent-python
+Requires: net-snmp-python
+Requires: python-hostlist
+Requires: bind-chroot
+Requires: python2-llfuse
+Requires: python-requests
+
+Requires(pre):   %{_sbindir}/useradd,%{_sbindir}/userdel
+Requires(pre):   %{_bindir}/systemctl
+
+Requires(post):  %{_bindir}/sed
+Requires(post):  %{_bindir}/systemctl
+Requires(post):  %{_sbindir}/groupadd,%{_sbindir}/groupdel
+Requires(post):  %{_bindir}/chmod,%{_bindir}/chown
+Requires(post):  %{_bindir}/getent,%{_bindir}/id
+
+Requires(preun): %{_bindir}/systemctl
+
+# ///////////////////////////////////////////////
+# DESCRIPTION
+# ///////////////////////////////////////////////
+%description
+Luna is a baremetal provisioning tool uses image-based-approach. It delivers image of operating systems, but not the 'recipe' how to configure OS, as competotors do. It dramatically speeds up imstallation time, and reduce administrative efforts.
+
+# ///////////////////////////////////////////////
+# CLIENT PACKAGE
+# ///////////////////////////////////////////////
+%package client
+Summary: Kernel module Luna for deployed nodes.
+Requires: kernel
+Requires: rootfiles
+Requires: openssh-server
+Requires: openssh
+Requires: openssh-clients
+Requires: tar
+Requires: pigz
+Requires: nc
+Requires: wget
+Requires: curl
+Requires: rsync
+Requires: gawk
+Requires: sed
+Requires: gzip
+Requires: parted
+Requires: e2fsprogs
+Requires: ipmitool
+Requires: vim-minimal
+Requires: grub2
+Requires: rb_libtorrent
+Requires: dracut-config-generic
+Requires: dracut-network
+Requires: nss
+Requires: nss-softokn
+
+%description client
+Dracut module for Luna deployment tool
+
+%package selinux
+Summary: SELinux policy.
+Requires: %{name} = %{version}-%{release}
+Requires(post): policycoreutils
+Requires(post): policycoreutils-python
+Requires(postun): policycoreutils
+Requires(postun): policycoreutils-python
+
+%description selinux
+SELinux policy for luna
+
+%package ansible
+Summary: Ansible support for luna
+Requires: ansible
+
+%description ansible
+Ansible support for luna
+
+# ///////////////////////////////////////////////
+# PREPARATION SECTION
+# ///////////////////////////////////////////////
+%prep
+%setup -n %{name}-%{version}-%{build_ver}
+
+# ///////////////////////////////////////////////
+# BUILD SECTION
+# ///////////////////////////////////////////////
+%build
+pushd doc/man
+make
+popd
+
+pushd contrib/ltorrent-client
+make
+popd
+
+pushd contrib/libluna-fakeuname
+make
+popd
+
+pushd contrib/selinux
+cat > luna.fc << EOF
+%{_sbindir}/lweb -- gen_context(system_u:object_r:lweb_exec_t,s0)
+%{_sbindir}/luna -- gen_context(system_u:object_r:bin_t,s0)
+%{_sbindir}/lpower -- gen_context(system_u:object_r:bin_t,s0)
+%{_sbindir}/lchroot -- gen_context(system_u:object_r:bin_t,s0)
+%{_sbindir}/ltorrent -- gen_context(system_u:object_r:ltorrent_exec_t,s0)
+%{_sbindir}/lfs_pxelinux -- gen_context(system_u:object_r:lfs_pxelinux_exec_t,s0)
+%{_sysconfdir}/luna.conf -- gen_context(system_u:object_r:luna_conf_t,s0)
+%{_datadir}/luna/templates -- gen_context(system_u:object_r:luna_conf_t,s0)
+%{_var}/log/luna(/.*)? -- gen_context(system_u:object_r:luna_log_t,s0)
+%{_sysconfdir}/named.luna.zones -- gen_context(system_u:object_r:named_conf_t,s0)
+EOF
+make -f %{_datadir}/selinux/devel/Makefile
+popd
+
+# ///////////////////////////////////////////////
+# INSTALL SECTION
+# ///////////////////////////////////////////////
+%install
+# Install files for main package
+# Main module
+%{__install} -m 755 -d luna                                     %{buildroot}%{python_sitelib}/luna
+%{__install} -m 755 -d luna/utils                               %{buildroot}%{python_sitelib}/luna/utils
+for f in luna/*.py luna/utils/*.py; do
+    %{__install} -m 644 $f                                      %{buildroot}%{python_sitelib}/$f
+done
+
+pushd bin
+for f in *; do
+    %{__install} -m 755 -D $f                                   %{buildroot}%{_sbindir}/$f
+done
+popd
+
+# Config file
+%{__install} -m 644 -D contrib/luna.conf                        %{buildroot}%{_sysconfdir}/luna.conf
+
+# Man files
+%{__install} -m 644 -D doc/man/lchroot.8.gz                     %{buildroot}%{_mandir}/man8/lchroot.8.gz
+%{__install} -m 644 -D doc/man/lfs_pxelinux.1.gz                %{buildroot}%{_mandir}/man1/lfs_pxelinux.1.gz
+%{__install} -m 644 -D doc/man/lpower.8.gz                      %{buildroot}%{_mandir}/man8/lpower.8.gz
+%{__install} -m 644 -D doc/man/ltorrent.1.gz                    %{buildroot}%{_mandir}/man1/ltorrent.1.gz
+%{__install} -m 644 -D doc/man/luna.8.gz                        %{buildroot}%{_mandir}/man8/luna.8.gz
+%{__install} -m 644 -D doc/man/lweb.1.gz                        %{buildroot}%{_mandir}/man1/lweb.1.gz
+
+# Other docs
+%{__install} -m 644 -D LICENSE                                  %{buildroot}%{_defaultdocdir}/%{name}-%{version}-%{release}/LICENSE
+%{__install} -m 644 -D README.md                                %{buildroot}%{_defaultdocdir}/%{name}-%{version}-%{release}/README.md
+%{__install} -m 644 -D doc/man/lchroot.8.rst                    %{buildroot}%{_defaultdocdir}/%{name}-%{version}-%{release}/doc/lchroot.rst
+%{__install} -m 644 -D doc/man/lfs_pxelinux.1.rst               %{buildroot}%{_defaultdocdir}/%{name}-%{version}-%{release}/doc/lfs_pxelinux.rst
+%{__install} -m 644 -D doc/man/lpower.8.rst                     %{buildroot}%{_defaultdocdir}/%{name}-%{version}-%{release}/doc/lpower.rst
+%{__install} -m 644 -D doc/man/ltorrent.1.rst                   %{buildroot}%{_defaultdocdir}/%{name}-%{version}-%{release}/doc/ltorrent.rst
+%{__install} -m 644 -D doc/man/luna.8.rst                       %{buildroot}%{_defaultdocdir}/%{name}-%{version}-%{release}/doc/luna.rst
+%{__install} -m 644 -D doc/man/lweb.1.rst                       %{buildroot}%{_defaultdocdir}/%{name}-%{version}-%{release}/doc/lweb.rst
+
+# Systemd unit files
+%{__install} -m 644 -D contrib/systemd/lweb.service             %{buildroot}%{_unitdir}/lweb.service
+%{__install} -m 644 -D contrib/systemd/ltorrent.service         %{buildroot}%{_unitdir}/ltorrent.service
+%{__install} -m 644 -D contrib/systemd/lfs_pxelinux             %{buildroot}%{_sysconfdir}/sysconfig/lfs_pxelinux
+%{__install} -m 644 -D contrib/systemd/lfs_pxelinux.service     %{buildroot}%{_unitdir}/lfs_pxelinux.service
+
+# Bash autocomplete
+%{__install} -m 644 -D contrib/luna_autocomplete.sh             %{buildroot}%{_sysconfdir}/profile.d/luna_autocomplete.sh
+
+# Create luna system directories
+%{__mkdir_p}                                                    %{buildroot}%{_var}/log/luna
+
+# Example config
+%{__install} -m 644 -D contrib/nginx/luna.conf                  %{buildroot}%{_datadir}/luna/nginx-luna.conf
+
+# DB migration script
+%{__install} -m 644 -D contrib/dbmigrate-000-v1.2.py            %{buildroot}%{_datadir}/luna/dbmigrate-000-v1.2.py
+
+# Templates
+%{__install} -m 755 -d templates                                %{buildroot}%{_datadir}/luna/templates
+for f in templates/*; do
+    %{__install} -m 644 -D $f                                   %{buildroot}%{_datadir}/luna/$f
+done
+
+# libluna-fakeuname
+pushd contrib/libluna-fakeuname
+%{__install} -m 755 -D libluna-fakeuname.so                     %{buildroot}%{_libdir}/libluna-fakeuname.so
+popd
+
+# client files
+%{__install} -m 755 -d contrib/dracut/95luna                    %{buildroot}%{dracut_dir}/95luna
+pushd contrib/dracut
+for f in 95luna/*; do
+    %{__install} -m 644 -D $f                                   %{buildroot}%{dracut_dir}/$f
+done
+popd
+%{__install} -m 755 -D contrib/ltorrent-client/ltorrent-client  %{buildroot}%{dracut_dir}/95luna/ltorrent-client
+
+# selinux policy
+%{__install} -m 644 -D contrib/selinux/luna.pp                  %{buildroot}%{_datadir}/selinux/packages/%{name}/luna.pp
+
+# firewalld services
+pushd contrib/firewalld-services
+for f in ./*; do
+    %{__install} -m 644 -D $f                                   %{buildroot}%{_sysconfdir}/firewalld/services/$f
+done
+popd
+
+# ansible modules
+pushd contrib/ansible
+%{__install} -m 644 -D plugins/connection/lchroot.py            %{buildroot}%{python_sitelib}/ansible/plugins/connection/lchroot.py
+pushd luna_ansible
+for f in ./*; do
+    %{__install} -m 644 -D $f                                   %{buildroot}%{python_sitelib}/luna_ansible/$f
+done
+popd
+pushd modules/clustering
+for f in ./*; do
+    %{__install} -m 644 -D $f                                   %{buildroot}%{python_sitelib}/ansible/modules/clustering/$f
+done
+popd
+%{__install} -m 755 -D luna                                     %{buildroot}/etc/ansible/hosts/luna
+popd
+
+
+# ///////////////////////////////////////////////
+# CLEAN SECTION
+# ///////////////////////////////////////////////
+%clean
+rm -rf %{buildroot}
+
+# ///////////////////////////////////////////////
+# PRE INSTALLATION PHASE
+# ///////////////////////////////////////////////
+%pre
+case "$1" in
+    # This is an initial install.
+    1)
+        # Stop services
+        %{_bindir}/systemctl stop lweb ltorrent 2>/dev/null || %{_bindir}/true
+        # Add user
+        %{_sbindir}/groupadd -r %{luna_group} 2>/dev/null || %{_bindir}/true
+        %{_sbindir}/useradd -r -g %{luna_group} -d %{luna_home} %{luna_user} 2>/dev/null || %{_bindir}/true
+    ;;
+
+    # This is an upgrade.
+    2)
+        # Stop services
+        %{_bindir}/systemctl stop lweb ltorrent 2>/dev/null || %{_bindir}/true
+    ;;
+esac
+exit 0
+
+%pre ansible
+if [ ! -d /etc/ansible/hosts ]; then
+    TMPNAME=$(mktemp -u -p /etc/ansible hosts.XXXXX)
+    mv /etc/ansible/hosts ${TMPNAME}
+    mkdir -p /etc/ansible/hosts
+    mv ${TMPNAME} /etc/ansible/hosts/
+fi
+exit 0
+
+# ///////////////////////////////////////////////
+# POST INSTALLATION PHASE MAIN
+# ///////////////////////////////////////////////
+%post
+LUNA_HOME_DIR=$(eval echo ~%{luna_user})
+%{__mkdir_p} ${LUNA_HOME_DIR}/boot
+%{__mkdir_p} ${LUNA_HOME_DIR}/torrents
+if [ ! -d ${LUNA_HOME_DIR}/templates ]; then
+    %{__cp} -pr %{_datadir}/luna/templates ${LUNA_HOME_DIR}/
+else
+    (>&2 echo "Warning: ${LUNA_HOME_DIR}/templates exists. Please copy %{_datadir}/luna/templates to ${LUNA_HOME_DIR} manually")
+fi
+%{__chown} -R %{luna_user}:%{luna_group} ${LUNA_HOME_DIR}
+%{_bindir}/systemctl daemon-reload
+%{_bindir}/firewall-cmd --reload 2>/dev/null || %{_bindir}/true
+exit 0
+
+# ///////////////////////////////////////////////
+# PRE REMOVE PHASE MAIN
+# ///////////////////////////////////////////////
+%preun
+case "$1" in
+    # This is an un-installation (0) or an upgrade (1).
+    [0-1])
+        # Stop luna services
+        %{_bindir}/systemctl stop lweb ltorrent 2>/dev/null || %{_bindir}/true
+    ;;
+esac
+%{_bindir}/rm -rf %{python_sitelib}/luna/*.pyc
+%{_bindir}/rm -rf %{python_sitelib}/luna/*.pyo
+%{_bindir}/rm -rf %{python_sitelib}/luna/utils/*.pyc
+%{_bindir}/rm -rf %{python_sitelib}/luna/utils/*.pyo
+exit 0
+
+%preun ansible
+%{_bindir}/rm -rf %{python_sitelib}/luna_ansible/*.pyc
+%{_bindir}/rm -rf %{python_sitelib}/luna_ansible/*.pyo
+%{_bindir}/rm -rf %{python_sitelib}/ansible/modules/clustering/*.pyc
+%{_bindir}/rm -rf %{python_sitelib}/ansible/modules/clustering/*.pyo
+%{_bindir}/rm -rf %{python_sitelib}/ansible/plugins/connection/*.pyc
+%{_bindir}/rm -rf %{python_sitelib}/ansible/plugins/connection/*.pyo
+
+# ///////////////////////////////////////////////
+# POST REMOVE PHASE MAIN
+# ///////////////////////////////////////////////
+%postun
+case "$1" in
+    # This is an un-installation (0) or an upgrade (1).
+    [0])
+        %{_sbindir}/userdel luna
+        %{_bindir}/systemctl daemon-reload
+        %{_bindir}/firewall-cmd --reload  2>/dev/null || %{_bindir}/true
+    ;;
+    [1])
+        %{_bindir}/systemctl daemon-reload
+        %{_bindir}/firewall-cmd --reload  2>/dev/null || %{_bindir}/true
+    ;;
+esac
+exit 0
+
+# ///////////////////////////////////////////////
+# POST INSTALLATION PHASE SELINUX
+# ///////////////////////////////////////////////
+%post selinux
+%{_sbindir}/semodule -i %{_datadir}/selinux/packages/%{name}/luna.pp
+LUNA_HOME_DIR=$(eval echo ~%{luna_user})
+TMPFILE=$(%{_bindir}/mktemp)
+cat > ${TMPFILE} << EOF
+fcontext -a -t luna_conf_t "${LUNA_HOME_DIR}/templates(/.*)?"
+fcontext -a -t luna_boot_files_t "${LUNA_HOME_DIR}/boot(/.*)?"
+fcontext -a -t luna_torrent_files_t "${LUNA_HOME_DIR}/torrents(/.*)?"
+port -a -t ltorrent_port_t -p tcp 7052-7200
+port -a -t ltorrent_port_t -p udp 7052-7200
+port -a -t lweb_port_t -p tcp 7051
+port -a -t luna_frontend_port_t -p tcp 7050
+EOF
+
+%{_sbindir}/semanage import -f ${TMPFILE}
+
+for DIR in templates boot torrents; do
+    %{_sbindir}/restorecon -R -v ${LUNA_HOME_DIR}/${DIR} >/dev/null 2>&1 || %{_bindir}/true
+done
+%{_bindir}/rm -rf ${TMPFILE}
+exit 0
+
+# ///////////////////////////////////////////////
+# POST REMOVE PHASE SELINUX
+# ///////////////////////////////////////////////
+%postun selinux
+# uninstall
+if [ $1 -eq 0 ]; then
+    LUNA_HOME_DIR=$(eval echo ~%{luna_user})
+    TMPFILE=$(%{_bindir}/mktemp)
+    %{_sbindir}/semanage export | %{_bindir}/sed -n "/\luna\|lweb\|ltorrent/{s/ -a / -d /p}" > ${TMPFILE}
+    %{_sbindir}/semanage import -f ${TMPFILE}
+    %{_sbindir}/semodule -r luna >/dev/null 2>&1 || %{_bindir}/true
+    for DIR in templates boot torrents; do
+        %{_sbindir}/restorecon -R -v ${LUNA_HOME_DIR}/${DIR} >/dev/null 2>&1 || %{_bindir}/true
+    done
+    %{_bindir}/rm -rf ${TMPFILE}
+fi
+exit 0
+
+
+# ///////////////////////////////////////////////
+# LIST FILES SECTION
+# ///////////////////////////////////////////////
+%files
+%defattr(-, root, root)
+%config(noreplace) %attr(0600, %{luna_user}, %{luna_group}) %{_sysconfdir}/luna.conf
+%{_sbindir}/*
+%{_libdir}/libluna-fakeuname.so
+%dir %{python_sitelib}/luna
+%{python_sitelib}/luna/*.py
+%exclude %{python_sitelib}/luna/*.pyc
+%exclude %{python_sitelib}/luna/*.pyo
+%{python_sitelib}/luna/utils
+%exclude %{python_sitelib}/luna/utils/*.pyc
+%exclude %{python_sitelib}/luna/utils/*.pyo
+%doc %{_mandir}/man1/*
+%doc %{_mandir}/man8/*
+%doc %{_defaultdocdir}/%{name}-%{version}-%{release}
+%{_unitdir}/*
+%config(noreplace) %{_sysconfdir}/sysconfig/lfs_pxelinux
+%{_sysconfdir}/profile.d/luna_autocomplete.sh
+%config(noreplace) %attr(0700, %{luna_user}, %{luna_group}) %{_var}/log/luna
+%{_datadir}/luna
+%{_sysconfdir}/firewalld/services/*
+
+%files client
+%defattr(-,root,root)
+%attr(0755, root, root) %{dracut_dir}/95luna
+%{_libdir}/libluna-fakeuname.so
+
+%files selinux
+%{_datadir}/selinux/packages/%{name}/luna.pp
+
+%files ansible
+%{python_sitelib}/luna_ansible
+%{python_sitelib}/ansible/modules/clustering/*.py
+%{python_sitelib}/ansible/plugins/connection/*.py
+%exclude %{python_sitelib}/luna_ansible/*.pyc
+%exclude %{python_sitelib}/luna_ansible/*.pyo
+%exclude %{python_sitelib}/ansible/modules/clustering/*.pyc
+%exclude %{python_sitelib}/ansible/modules/clustering/*.pyo
+%exclude %{python_sitelib}/ansible/plugins/connection/*.pyc
+%exclude %{python_sitelib}/ansible/plugins/connection/*.pyo
+%{_sysconfdir}/ansible/hosts/luna
+
+
+# ///////////////////////////////////////////////
+# CHANGELOG
+# ///////////////////////////////////////////////
+%changelog

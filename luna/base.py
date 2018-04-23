@@ -20,14 +20,18 @@ along with Luna.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
 
-from config import *
+from config import db_name, use_key, usedby_key
+
 import pymongo
-import logging
 import inspect
-import json
+import logging
+
 from bson.objectid import ObjectId
 from bson.dbref import DBRef
+from bson.json_util import dumps
+
 from luna import utils
+
 
 class Base(object):
     """
@@ -36,7 +40,7 @@ class Base(object):
     """
 
     logging.basicConfig(level=logging.INFO)
-#    logging.basicConfig(level=logging.DEBUG)
+    log = logging.getLogger(__name__)
     _logger = logging.getLogger(__name__)
     _collection_name = None
     _mongo_collection = None
@@ -50,100 +54,140 @@ class Base(object):
         """
         Constructor can be used for creating object by setting create=True
         nodeprefix='node' and nodedigits='3' will give names like node001,
-        nodeprefix='compute' and nodedigits='4' will give names like compute0001
+        nodeprefix='compute' and nodedigits='2' will give names like compute01
         name is used to give default name for mongo document.
         Don't change it is are not sure what you are doing.
         """
-        self._logger.error("Please do not call this class directly")
-        raise RuntimeError
+        err_msg = "Please do not call this class directly"
+        self.log.error(err_msg)
+        raise RuntimeError, err_msg
+
+    def __str__(self):
+        """Returns name"""
+
+        return self._name
+
+    @property
+    def name(self):
+        """Name of the object"""
+
+        return str(self._name)
+
+    @property
+    def id(self):
+        """MongoDB's '_id' value of the document"""
+
+        return self._id
+
+    @property
+    def DBRef(self):
+        """MongoDB DBRef of the document"""
+
+        return self._DBRef
+
+    @property
+    def nice_json(self):
+        """Raw json from MongoDB. One should not use it for change"""
+
+        return dumps(self._json, sort_keys=True, indent=4,
+                     separators=(',', ': '))
+
+    @property
+    def keylist(self):
+        """
+        List of the 'simple' fields one can change (no data structures here)
+        """
+        return self._keylist
 
     def _check_name(self, name, mongo_db, create, id):
+        return self._get_object(name, mongo_db, create, id)
+
+    def _get_object(self, name, mongo_db, create, id):
+        if name and type(name) != str:
+            err_msg = "Name of the object should be string."
+            self.log.error(err_msg)
+            raise RuntimeError, err_msg
         if mongo_db:
             self._mongo_db = mongo_db
         else:
             try:
-                self._mongo_client = pymongo.MongoClient(utils.helpers.get_con_options())
+                client = pymongo.MongoClient(**utils.helpers.get_con_options())
             except:
-                self._logger.error("Unable to connect to MongoDB.")
-                raise RuntimeError
-            self._logger.debug("Connection to MongoDB was successful.")
-            self._mongo_db = self._mongo_client[db_name]
+                err_msg = "Unable to connect to MongoDB."
+                self.log.error(err_msg)
+                raise RuntimeError, err_msg
+
+            self.log.debug("Connection to MongoDB was successful.")
+            self._mongo_db = client[db_name]
+
         self._mongo_collection = self._mongo_db[self._collection_name]
-        if id:
-            mongo_doc = self._mongo_collection.find_one({'_id': id})
-            if mongo_doc:
-                return mongo_doc
-        if not name:
-            self._logger.error("'name' needs to be specified")
-            raise RuntimeError
-        mongo_doc = self._mongo_collection.find_one({'name': name})
-        if not create and not mongo_doc:
-            self._logger.error("It is needed to create object '{}' type '{}' first".format(name, self._collection_name))
-            raise RuntimeError
-        if create and mongo_doc and mongo_doc['name'] == name:
-            self._logger.error("'{}' is already created".format(name))
-            raise RuntimeError
-        return mongo_doc
+
+        self._json = self._mongo_collection.find_one({'$or': [{'name': name},
+                                                              {'_id': id}]})
+
+        if not create and not self._json:
+            err_msg = ("Object '{}' of type '{}' does not exist"
+                       .format(name, self._collection_name))
+            self.log.error(err_msg)
+            raise RuntimeError, err_msg
+
+        elif not create and self._json:
+            self._id = self._json['_id']
+            self._name = self._json['name']
+            self._DBRef = DBRef(u'' + self._collection_name, self._id)
+
+        elif create and self._json:
+            err_msg = "'{}' is already created".format(self._json['name'])
+            self.log.error(err_msg)
+            raise RuntimeError, err_msg
+
+        return self._json
 
     def _debug_function(self):
-        """
-        Outputs name of the calling function and parameters passed into
-        """
+        """Outputs the calling function's name and it's arguments"""
+
         if logging.getLogger().getEffectiveLevel() != 10:
             return None
+
         caller = inspect.currentframe().f_back
         f_name = inspect.getframeinfo(caller)[2]
         _, _, _, values = inspect.getargvalues(caller)
+
         return (f_name, values)
 
     def _debug_instance(self):
-        """
-        Outputs tuple of internal data from class
-        """
+        """Outputs tuple of internal data from class"""
+
         if logging.getLogger().getEffectiveLevel() != 10:
             return None
+
         return (self._name, self._id, self._DBRef, self.nice_json)
 
     def _wipe_vars(self):
-        """
-        Erase class variables
-        """
-        self._logger.debug("Arguments to function '{}".format(self._debug_function()))
+        """Erase class variables"""
+
+        self.log.debug("function args {}".format(self._debug_function()))
         keys = self.__dict__.keys()
+
         for key in keys:
             self.__dict__.pop(key, None)
+
         return None
 
     def _get_json(self):
-        if not self._id:
-            self._logger.error("Was object deleted?")
-            return None
-        if self._id:
-            return self._mongo_collection.find_one({'_id': self._id})
+        """Return document as stored in DB in json format"""
 
-    def __repr__(self):
-        """
-        Returns nice JSON
-        """
-        from bson.json_util import dumps
-        return dumps(self._get_json(), sort_keys=True, indent=4, separators=(',', ': '))
-
-    def __str__(self):
-        """
-        Returns name
-        """
-        return self._name
+        return self._json
 
     def show(self):
         def get_value(value):
             if type(value) is not DBRef:
                 return value
             dbref = value
-            #mongo_db = self._mongo_client[db_name]
-            mongo_db = self._mongo_db
             mongo_collection = self._mongo_db[dbref.collection]
             try:
-                name = '[' + mongo_collection.find_one({'_id': dbref.id})['name'] + ']'
+                name = mongo_collection.find_one({'_id': dbref.id})['name']
+                name = '[' + name + ']'
             except:
                 name = '[id_' + str(dbref.id) + ']'
             return name
@@ -181,143 +225,109 @@ class Base(object):
             pass
         return resolve_links(json)
 
-    @property
-    def name(self):
-        """
-        Name of the object
-        """
-        return str(self._name)
-
-    @property
-    def id(self):
-        """
-        MongoDB's '_id' value of the document
-        """
-        return self._id
-
-    @property
-    def DBRef(self):
-        """
-        MongoDB DBRef of the document
-        """
-        return self._DBRef
-
-    @property
-    def json(self):
-        """
-        Raw json from MongoDB. One should not use it for change
-        """
-        return self._get_json()
-
-    @property
-    def nice_json(self):
-        """
-        Raw json from MongoDB. One should not use it for change
-        """
-        from bson.json_util import dumps
-        return dumps(self._get_json(), sort_keys=True, indent=4, separators=(',', ': '))
-
-    @property
-    def keylist(self):
-        """
-        List of the 'simple' fields one can change (no data structures here)
-        """
-        return self._keylist
-
     def get(self, key):
-        """
-        Allow to get variables
-        """
-        self._logger.debug("Arguments to function '{}".format(self._debug_function()))
-        if not self._id:
-            self._logger.error("Was object deleted?")
-            return None
-        obj_json = self._get_json()
-        try:
-            val = obj_json[key]
-            if type(val) == unicode:
-                val = str(val)
-            if not bool(val):
-                try:
-                    if self._keylist[key] == type(''):
-                        val = ''
-                    if self._keylist[key] == type(0):
-                        val = 0
-                except:
-                    pass
-            return val
-        except:
-            return None
+        """Get object attributes"""
+
+        self.log.debug("function args {}".format(self._debug_function()))
+
+        if key in self._json:
+            value = self._json[key]
+
+            if not value and key in self._keylist:
+                if self._keylist[key] is str:
+                    value = ''
+                elif self._keylist[key] is int:
+                    value = 0
+
+            elif value and type(value) == unicode:
+                value = str(value)
+
+            return value
+
+        else:
+            value = None
+
+        return value
+
+    def store(self, obj):
+        obj[usedby_key] = {}
+        self._id = self._mongo_collection.insert(obj)
+
+        self._DBRef = DBRef(self._collection_name, self._id)
+        self._name = obj['name']
+        self._json = obj
+
+        return True
 
     def set(self, key, value):
-        """
-        Allow to set variables from keylist
-        """
-        self._logger.debug("Arguments to function '{}".format(self._debug_function()))
-        if not self._id:
-            self._logger.error("Was object deleted?")
-            return None
-        try:
-            val_type = self._keylist[key]
-        except:
-            self._logger.error("No such key '{}' for the given object".format(key))
-            return None
+        """Allow to set variables from keylist"""
+
+        self.log.debug("function args {}".format(self._debug_function()))
+
         if not bool(key) or type(key) is not str:
-            self._logger.error("Field should be specified")
-            return None
-        obj_json = self._get_json()
-        if not obj_json:
-            self._logger.error("No json for the given object")
-            return None
-        if type(value) is not val_type:
-            self._logger.error("Value '{}' should be '{}' type".format(key, val_type))
-            return None
+            self.log.error("Field should be specified")
+            return False
+
+        if not self._json:
+            self.log.error("No json for the given object")
+            return False
+
+        if key in self._keylist and type(value) is not self._keylist[key]:
+            self.log.error(("Value '{}' should be of type '{}'"
+                            .format(key, self._keylist[key])))
+            return False
+
+        if value == '':
+            value = None
+
         if type(value) is str:
             value = unicode(value, "utf-8")
-        mongo_doc = {key: value}
-        self._mongo_collection.update({'_id': self._id}, {'$set': mongo_doc}, multi=False, upsert=False)
+
+        self._mongo_collection.update({'_id': self._id},
+                                      {'$set': {key: value}},
+                                      multi=False, upsert=False)
+
+        self._json[key] = value
+
         return True
 
     def rename(self, name):
-        """
-        Rename object
-        """
-        self._logger.debug("Arguments to function '{}".format(self._debug_function()))
-        if not self._id:
-            self._logger.error("Was object deleted?")
+        """Rename object"""
+        self.log.debug("function args {}".format(self._debug_function()))
+
+        obj = self._mongo_collection.find_one({'name': name})
+        if obj:
+            self.log.error("Object '{}' exists already".format(name))
             return None
-        mongo_doc = self._mongo_collection.find_one({'name': name})
-        if mongo_doc:
-            self._logger.error("Object '{}' exists already".format(name))
-            return None
-        self._mongo_collection.update({'_id': self._id}, {'$set': {'name': name}}, multi=False, upsert=False)
+
+        self.set('name', name)
         self._name = name
+
         return True
 
     def link(self, remote_dbref):
-        """
-        Unlink objects in MongoDB
-        """
-        self._logger.debug("Arguments to function '{}".format(self._debug_function()))
-        if not self._id:
-            self._logger.error("Was object deleted?")
-            return None
+        """Unlink objects in MongoDB"""
+        self.log.debug("function args {}".format(self._debug_function()))
+
         try:
             remote_dbref = remote_dbref.DBRef
         except:
             pass
-        if type(remote_dbref) is not type(self._DBRef):
-            self._logger.error("Passed argument is not DBRef type")
+
+        if not isinstance(remote_dbref, DBRef):
+            self.log.error("Object to link to is not a DBRef object")
             return None
-        if remote_dbref == self._DBRef:
-            self._logger.error("Cant operate with the link to the same object")
+
+        elif remote_dbref == self._DBRef:
+            self.log.error("Can't link an object to itself")
             return None
-        if not self._id:
-            self._logger.error("Was object deleted?")
-            return None
-        remote_mongo_collection = self._mongo_db[remote_dbref.collection]
-        use_doc = self._mongo_collection.find_one({'_id': self._id},{use_key: 1, '_id':0})
-        usedby_doc = remote_mongo_collection.find_one({'_id': remote_dbref.id},{usedby_key: 1, '_id':0})
+
+        use_doc = self._mongo_collection.find_one({'_id': self._id},
+                                                  {use_key: 1, '_id': 0})
+
+        remote_collection = self._mongo_db[remote_dbref.collection]
+        usedby_doc = remote_collection.find_one({'_id': remote_dbref.id},
+                                                {usedby_key: 1, '_id': 0})
         try:
             use_doc = use_doc[use_key]
         except:
@@ -327,53 +337,54 @@ class Base(object):
         except:
             usedby_doc = {}
         try:
-            link_count = use_doc[remote_dbref.collection][str(remote_dbref.id)]
+            links = use_doc[remote_dbref.collection][str(remote_dbref.id)]
         except:
-            link_count = 0
+            links = 0
         try:
-            back_link_count = usedby_doc[self._DBRef.collection][str(self._DBRef.id)]
+            backlinks = usedby_doc[self._DBRef.collection][str(self._DBRef.id)]
         except:
-            back_link_count = 0
-        link_count += 1
-        back_link_count += 1
+            backlinks = 0
+        links += 1
+        backlinks += 1
         try:
-            use_doc[remote_dbref.collection][str(remote_dbref.id)] = link_count
+            use_doc[remote_dbref.collection][str(remote_dbref.id)] = links
         except:
             use_doc[remote_dbref.collection] = {}
-            use_doc[remote_dbref.collection][str(remote_dbref.id)] = link_count
+            use_doc[remote_dbref.collection][str(remote_dbref.id)] = links
         try:
-            usedby_doc[self._DBRef.collection][str(self._DBRef.id)] = back_link_count
+            usedby_doc[self._DBRef.collection][str(self._DBRef.id)] = backlinks
         except:
             usedby_doc[self._DBRef.collection] = {}
-            usedby_doc[self._DBRef.collection][str(self._DBRef.id)] = back_link_count
-        self._mongo_collection.update({'_id': self._id}, {'$set': {use_key: use_doc} })
-        remote_mongo_collection.update({'_id': remote_dbref.id},  {'$set': {usedby_key: usedby_doc} })
+            usedby_doc[self._DBRef.collection][str(self._DBRef.id)] = backlinks
+        self._mongo_collection.update({'_id': self._id},
+                                      {'$set': {use_key: use_doc}})
+        remote_collection.update({'_id': remote_dbref.id},
+                                 {'$set': {usedby_key: usedby_doc}})
 
     def unlink(self, remote_dbref):
-        """
-        Link objects in MongoDB
-        """
-        self._logger.debug("Arguments to function '{}".format(self._debug_function()))
-        if not self._id:
-            self._logger.error("Was object deleted?")
-            return None
+        """Link objects in MongoDB"""
+        self.log.debug("function args {}".format(self._debug_function()))
+
         try:
             remote_dbref = remote_dbref.DBRef
         except:
             pass
-        if type(remote_dbref) is not type(self._DBRef):
-            self._logger.error("Passed argument is not DBRef type")
-            raise RuntimeError
+
+        if not isinstance(remote_dbref, DBRef):
+            err_msg = "Object to unlink from is not a DBRef object"
+            self.log.error(err_msg)
+            raise RuntimeError, err_msg
             return None
-        if remote_dbref == self._DBRef:
-            self._logger.error("Cant operate with the link to the same object")
+
+        elif remote_dbref == self._DBRef:
+            self.log.error("Can't unlink an object from itself")
             return None
-        if not self._id:
-            self._logger.error("Was object deleted?")
-            return None
-        remote_mongo_collection = self._mongo_db[remote_dbref.collection]
-        use_doc = self._mongo_collection.find_one({'_id': self._id},{use_key: 1, '_id':0})
-        usedby_doc = remote_mongo_collection.find_one({'_id': remote_dbref.id},{usedby_key: 1, '_id':0})
+
+        remote_collection = self._mongo_db[remote_dbref.collection]
+        use_doc = self._mongo_collection.find_one({'_id': self._id},
+                                                  {use_key: 1, '_id': 0})
+        usedby_doc = remote_collection.find_one({'_id': remote_dbref.id},
+                                                {usedby_key: 1, '_id': 0})
         try:
             use_doc = use_doc[use_key]
         except:
@@ -383,49 +394,53 @@ class Base(object):
         except:
             usedby_doc = {}
         try:
-            link_count = use_doc[remote_dbref.collection][str(remote_dbref.id)]
+            links = use_doc[remote_dbref.collection][str(remote_dbref.id)]
         except:
-            link_count = 0
+            links = 0
         try:
-            back_link_count = usedby_doc[self._DBRef.collection][str(self._DBRef.id)]
+            backlinks = usedby_doc[self._DBRef.collection][str(self._DBRef.id)]
         except:
-            back_link_count = 0
-        if link_count < 1:
-            self._logger.error("No links to this object. Cannot unlink.")
+            backlinks = 0
+
+        if links < 1:
+            self.log.error("No links to this object. Cannot unlink.")
             return None
-        if back_link_count < 1:
-            self._logger.error("Link to this objct exists, but no backlinks to this object. Cannot unlink.")
+
+        if backlinks < 1:
+            self.log.error(("Link to this objct exists, "
+                            "but no backlinks to this object. Cannot unlink."))
             return None
-        link_count -= 1
-        back_link_count -= 1
-        if link_count < 1:
+
+        links -= 1
+        backlinks -= 1
+        if links < 1:
             use_doc[remote_dbref.collection].pop(str(remote_dbref.id))
             if len(use_doc[remote_dbref.collection]) < 1:
                 use_doc.pop(remote_dbref.collection)
         else:
-            use_doc[remote_dbref.collection][str(remote_dbref.id)] = link_count
-        if back_link_count < 1:
+            use_doc[remote_dbref.collection][str(remote_dbref.id)] = links
+        if backlinks < 1:
             usedby_doc[self._DBRef.collection].pop(str(self._DBRef.id))
             if len(usedby_doc[self._DBRef.collection]) < 1:
                 usedby_doc.pop(self._DBRef.collection)
         else:
-            usedby_doc[self._DBRef.collection][str(self._DBRef.id)] = back_link_count
-        self._mongo_collection.update({'_id': self._id}, {'$set': {use_key: use_doc } })
-        remote_mongo_collection.update({'_id': remote_dbref.id},  {'$set': {usedby_key: usedby_doc} })
+            usedby_doc[self._DBRef.collection][str(self._DBRef.id)] = backlinks
+        self._mongo_collection.update({'_id': self._id},
+                                      {'$set': {use_key: use_doc}})
+        remote_collection.update({'_id': remote_dbref.id},
+                                 {'$set': {usedby_key: usedby_doc}})
 
-    def get_links(self, resolve=False, collection = None):
-        """
-        Enumerates all references
-        """
-        self._logger.debug("Arguments to function '{}".format(self._debug_function()))
-        if not self._id:
-            self._logger.error("Was object deleted?")
-            return None
-        use_doc = self._mongo_collection.find_one({'_id': self._id},{use_key: 1, '_id':0})
+    def get_links(self, resolve=False, collection=None):
+        """Enumerates all references"""
+
+        self.log.debug("function args {}".format(self._debug_function()))
+        use_doc = self._mongo_collection.find_one({'_id': self._id},
+                                                  {use_key: 1, '_id': 0})
         try:
             use_doc = use_doc[use_key]
         except:
             return []
+
         if bool(collection):
             try:
                 collection_objs = use_doc.pop('collection')
@@ -433,34 +448,34 @@ class Base(object):
                 collection_objs = {}
             use_doc = {}
             use_doc['collection'] = collection_objs
+
         output = []
         for col_iter in use_doc:
             for uid in use_doc[col_iter]:
                 dbref = DBRef(col_iter, ObjectId(uid))
-                remote_mongo_collection = self._mongo_db[dbref.collection]
+                remote_col = self._mongo_db[dbref.collection]
                 if not resolve:
                     name = str(dbref.id)
                 else:
                     try:
-                        name = remote_mongo_collection.find_one({'_id': dbref.id})['name']
+                        name = remote_col.find_one({'_id': dbref.id})['name']
                     except:
                         name = str(dbref.id)
-                output.extend([{'collection': dbref.collection, 'name': name, 'DBRef': dbref}])
+                output.extend([{'collection': dbref.collection,
+                                'name': name, 'DBRef': dbref}])
         return output
 
-    def get_back_links(self, resolve=False, collection = None):
-        """
-        Enumerates all reverse references
-        """
-        self._logger.debug("Arguments to function '{}".format(self._debug_function()))
-        if not self._id:
-            self._logger.error("Was object deleted?")
-            return None
-        usedby_doc = self._mongo_collection.find_one({'_id': self._id},{usedby_key: 1, '_id':0})
+    def get_back_links(self, resolve=False, collection=None):
+        """Enumerates all reverse references"""
+        self.log.debug("function args {}".format(self._debug_function()))
+
+        usedby_doc = self._mongo_collection.find_one({'_id': self._id},
+                                                     {usedby_key: 1, '_id': 0})
         try:
             usedby_doc = usedby_doc[usedby_key]
         except:
             return []
+
         if bool(collection):
             try:
                 collection_objs = usedby_doc.pop('collection')
@@ -468,45 +483,56 @@ class Base(object):
                 collection_objs = {}
             usedby_doc = {}
             usedby_doc['collection'] = collection_objs
+
         output = []
         for col_iter in usedby_doc:
             for uid in usedby_doc[col_iter]:
                 dbref = DBRef(col_iter, ObjectId(uid))
-                remote_mongo_collection = self._mongo_db[dbref.collection]
+                remote_col = self._mongo_db[dbref.collection]
                 if not resolve:
                     name = str(dbref.id)
                 else:
                     try:
-                        name = remote_mongo_collection.find_one({'_id': dbref.id})['name']
+                        name = remote_col.find_one({'_id': dbref.id})['name']
                     except:
                         name = str(dbref.id)
-                output.extend([{'collection': dbref.collection, 'name': name, 'DBRef': dbref}])
+                output.extend([{'collection': dbref.collection,
+                                'name': name, 'DBRef': dbref}])
         return output
 
-    def delete(self):
-        """
-        Is used to delete the document from MongoDB.
-        """
-        self._logger.debug("Arguments to function '{}".format(self._debug_function()))
-        if not self._id:
-            self._logger.error("Was object deleted?")
-            return None
+    def cleanup_links(self):
         links = self.get_links(resolve=True)
         back_links = self.get_back_links(resolve=True)
+
         if len(back_links) > 0:
-            self._logger.error("Current object is being written as a dependency for the following objects:")
+            self.log.error(("{} is a dependency for the objects:"
+                            .format(self._name)))
+
             for elem in back_links:
-                try:
-                    name = elem['DBRef'].id
-                    collection = elem['DBRef'].collection
-                    name = elem['name']
-                    collection = elem['collection']
-                except:
-                    pass
-                self._logger.error("[{}/{}]".format(collection, name))
-            return None
+                self.log.error("[{}/{}]".format(elem['collection'],
+                                                elem['name']))
+
+            return False
+
         for link in links:
             self.unlink(link['DBRef'])
+
+        return True
+
+    def release_resources(self):
+        return True
+
+    def delete(self):
+        """Used to delete this object from the datastore"""
+
+        self.log.debug("function {} args".format(self._debug_function()))
+
+        if not self.cleanup_links():
+            return False
+
+        self.release_resources()
+
         ret = self._mongo_collection.remove({'_id': self._id}, multi=False)
         self._wipe_vars()
+
         return not ret['err']

@@ -1,6 +1,6 @@
 [Unit]
 Description=Luna FUSE filesystem for serving pxelinux config files
-After=lseb.service
+After=lweb.service
 Requires=lweb.service
 
 [Service]

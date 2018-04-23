@@ -1,0 +1,11 @@
+---
+- hosts: localhost
+  roles:
+  - role: osimage_create
+    tags: create
+
+  - role: osimage_options
+    tags: options
+
+  - role: osimage_pack
+    tags: pack

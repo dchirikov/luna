@@ -1,0 +1,8 @@
+---
+- hosts: localhost
+  roles:
+  - role: network_create
+    tags: create
+
+  - role: network_options
+    tags: options

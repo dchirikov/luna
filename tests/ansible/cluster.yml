@@ -1,0 +1,14 @@
+---
+- hosts: localhost
+  roles:
+  - role: cluster_create
+    tags: create
+
+  - role: cluster_options
+    tags: options
+
+  - role: cluster_makedhcp
+    tags: makedhcp
+
+  - role: cluster_makedns
+    tags: makedns

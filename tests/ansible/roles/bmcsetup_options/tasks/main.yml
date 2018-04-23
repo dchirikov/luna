@@ -1,0 +1,65 @@
+###############################################################################
+
+- name: Cleanup
+  luna_cluster:
+    state: "absent"
+  ignore_errors: true
+
+- name: Create cluster
+  luna_cluster:
+    frontend_address: "{{ luna_frontend_address }}"
+    path: "{{ luna_home }}"
+    state: "present"
+
+###############################################################################
+
+- name: Create bmcsetup
+  luna_bmcsetup:
+    name: "basic"
+    user: "admin"
+    password: "admin"
+    mgmtchannel: 2
+    netchannel: 3
+    userid: 10
+    comment: "Created by ansible"
+
+###############################################################################
+
+- name: Create same bmcsetup
+  luna_bmcsetup:
+    name: "basic"
+    user: "admin"
+    password: "admin"
+    mgmtchannel: 2
+    netchannel: 3
+    userid: 10
+    comment: "Created by ansible"
+  register: res
+
+- assert: { that: "res.changed == false" }
+
+###############################################################################
+##  Check luna bmcsetup show basic output
+
+- name: Set expected var
+  set_fact:
+    expected:
+    - "+----------------+-----------------------+"
+    - "| Parameter      | Value                 |"
+    - "+----------------+-----------------------+"
+    - "| name           | basic                 |"
+    - "| mgmtchannel    | 2                     |"
+    - "| netchannel     | 3                     |"
+    - "| password       | admin                 |"
+    - "| user           | admin                 |"
+    - "| userid         | 10                    |"
+    - "| comment        | Created by ansible    |"
+    - "+----------------+-----------------------+"
+
+- name: Check luna cluster show output
+  command: "luna bmcsetup show basic"
+  register: res
+
+- assert: { that: "expected == res.stdout_lines"}
+
+###############################################################################

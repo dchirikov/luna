@@ -1,6 +1,6 @@
 [Unit]
 Description=Luna Server part
-After=network.target
+After=network.target mongod.service
 Requires=mongod.service
 
 [Service]

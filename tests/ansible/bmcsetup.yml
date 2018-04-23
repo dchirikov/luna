@@ -1,0 +1,8 @@
+---
+- hosts: localhost
+  roles:
+  - role: bmcsetup_create
+    tags: create
+
+  - role: bmcsetup_options
+    tags: options

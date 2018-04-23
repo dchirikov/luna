@@ -20,17 +20,8 @@ along with Luna.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
 
-from config import *
-
 import logging
-import sys
-import time
-import threading
-import netsnmp
-import datetime
-import inspect
 
-from bson.dbref import DBRef
 from bson.objectid import ObjectId
 
 from luna import utils
@@ -38,122 +29,150 @@ from luna.base import Base
 from luna.cluster import Cluster
 from luna.network import Network
 
+
 class OtherDev(Base):
-    """
-    Class for other devices
-    """
-    def __init__(self, name = None, mongo_db = None, create = False, id = None, network = None,
-            ip = None):
+    """Class for other devices"""
+
+    log = logging.getLogger(__name__)
+
+    def __init__(self, name=None, mongo_db=None, create=False, id=None,
+                 network=None, ip=None, comment=''):
         """
-        netwwork - network device connected
-        ip       - ip of the switch
+        network - the network the device is connected to
+        ip      - device's ip
         """
-        self._logger.debug("Arguments to function '{}".format(self._debug_function()))
+
+        self.log.debug("function args {}".format(self._debug_function()))
+
+        # Define the schema used to represent otherdev objects
+
         self._collection_name = 'otherdev'
-        mongo_doc = self._check_name(name, mongo_db, create, id)
-        self._keylist = {}
+        self._keylist = {'comment': type('')}
+
+        # Check if this device is already present in the datastore
+        # Read it if that is the case
+
+        dev = self._get_object(name, mongo_db, create, id)
+
         if create:
-            cluster = Cluster(mongo_db = self._mongo_db)
-            passed_vars = inspect.currentframe().f_locals
-            for key in self._keylist:
-                if type(passed_vars[key]) is not self._keylist[key]:
-                    self._logger.error("Argument '{}' should be '{}'".format(key, self._keylist[key]))
-                    raise RuntimeError
-            if not bool(network):
+            cluster = Cluster(mongo_db=self._mongo_db)
+
+            if not network:
                 connected = {}
+            elif not ip:
+                err_msg = "IP needs to be specified"
+                self.log.error(err_msg)
+                raise RuntimeError, err_msg
             else:
-                if not bool(ip):
-                    self._logger.error("IP needs to be specified")
-                    raise RuntimeError
-                net = Network(name = network, mongo_db = self._mongo_db)
-                ip = net.reserve_ip(ip, ignore_errors = False)
-                if not bool(ip):
-                    raise RuntimeError
-                connected = {str(net.DBRef.id): ip}
-            mongo_doc = { 'name': name, 'connected': connected}
-            self._logger.debug("mongo_doc: '{}'".format(mongo_doc))
-            self._name = name
-            self._id = self._mongo_collection.insert(mongo_doc)
-            self._DBRef = DBRef(self._collection_name, self._id)
+                net = Network(name=network, mongo_db=self._mongo_db)
+                ipnum = net.reserve_ip(ip, ignore_errors=False)
+                if not ipnum:
+                    err_msg = "Unable to allocate IP in network"
+                    self.log.error(err_msg)
+                    raise RuntimeError, err_msg
+
+                connected = {str(net.DBRef.id): ipnum}
+
+            # Store the new device in the datastore
+
+            dev = {'name': name, 'connected': connected, 'comment': comment}
+
+            self.log.debug("Saving dev '{}' to the datastore".format(dev))
+
+            self.store(dev)
+
+            # Link this device to its dependencies and the current cluster
+
             self.link(cluster)
-            if bool(connected):
+
+            if connected and net:
                 self.link(net)
+
+        self.log = logging.getLogger('otherdev.' + self._name)
+
+    def get_ip(self, network=None):
+        if not network:
+            self.log.error("Network needs to be specified")
+            return None
+
+        nets = self.get('connected')
+        if type(network) == ObjectId and str(network) in nets:
+            return nets[str(network)]
+
+        elif type(network) is str:
+            for rec in nets:
+                net = Network(id=ObjectId(rec), mongo_db=self._mongo_db)
+                if net.name == network and nets[rec]:
+                    return utils.ip.reltoa(
+                        net._json['NETWORK'], nets[rec], net.version)
+
         else:
-            self._name = mongo_doc['name']
-            self._id = mongo_doc['_id']
-            self._DBRef = DBRef(self._collection_name, self._id)
-
-    def get_ip(self, network_name = None):
-        if not bool(network_name):
-            self._logger.error("Network needs to be specified")
-            return None
-        nets = self._get_json()['connected']
-        if type(network_name) == ObjectId:
-            try:
-                return nets[str(network_name)]
-            except:
-                self._logger.error("Cannot find configured IP in the network '{}' for '{}'".format(str(network_name), self.name))
-                return None
-        for rec in nets:
-            net = Network(id = ObjectId(rec), mongo_db = self._mongo_db)
-            if net.name == network_name:
-                return utils.ip.reltoa(net._get_json()['NETWORK'], nets[rec])
-        return None
-
-    def del_net(self, network = None):
-        if not bool(network):
-            self._logger.error("Network should be specified")
+            self.log.error("Device '{}' is not attached to network '{}'"
+                           .format(self.name, str(network)))
             return None
 
-        obj_json = self._get_json()
-        net = Network(network, mongo_db = self._mongo_db)
-        rel_ip = None
-        try:
-            rel_ip = obj_json['connected'][str(net.id)]
-        except:
-            self._logger.error("Cannot find configured IP in the network '{}' for '{}'".format(network, self.name))
+    def del_net(self, network=None):
+        if not network:
+            self.log.error("Network needs to be specified")
             return None
-        net.release_ip(utils.ip.reltoa(net._get_json()['NETWORK'], rel_ip))
-        obj_json['connected'].pop(str(net.id))
-        ret = self._mongo_collection.update({'_id': self._id}, {'$set': obj_json}, multi=False, upsert=False)
+
+        connected = self.get('connected')
+
+        net = Network(network, mongo_db=self._mongo_db)
+        if not str(net.id) in connected:
+            self.log.error("Device '{}' is not attached to network '{}'"
+                           .format(self.name, str(network)))
+            return None
+
+        net.release_ip(connected[str(net.id)])
+        connected.pop(str(net.id))
+        res = self.set('connected', connected)
+
         self.unlink(net)
-        return not ret['err']
+
+        return res
 
     def list_nets(self):
-        obj_json = self._get_json()
         nets = []
-        for elem in obj_json['connected']:
-            nets.append(Network(id = ObjectId(elem), mongo_db = self._mongo_db).name)
+        for elem in self.get('connected'):
+            net = Network(id=ObjectId(elem), mongo_db=self._mongo_db)
+            nets.append(net.name)
+
         return nets
 
-    def set_ip(self, network = None, ip = None):
-        if not bool(network):
-            self._logger.error("Network should be specified")
+    def set_ip(self, network=None, ip=None):
+        if not network:
+            self.log.error("Network needs to be specified")
             return None
-        if not bool(ip):
-            return self.del_net(network = network)
-        obj_json = self._get_json()
-        net = Network(name = network, mongo_db = self._mongo_db)
-        try:
-            old_rel_ip = obj_json['connected'][str(net.DBRef.id)]
-        except:
-            old_rel_ip = None
-        if old_rel_ip:
-            net.release_ip(utils.ip.reltoa(net._get_json()['NETWORK'], old_rel_ip))
-        new_ip = net.reserve_ip(ip)
-        if not new_ip:
+
+        if not ip:
+            return self.del_net(network=network)
+
+        connected = self.get('connected')
+
+        link = True
+        net = Network(name=network, mongo_db=self._mongo_db)
+        if str(net.id) in connected:
+            net.release_ip(connected[str(net.id)])
+            link = False
+
+        ip = net.reserve_ip(ip)
+        if not ip:
             return None
-        obj_json['connected'][str(net.DBRef.id)] = new_ip
-        ret = self._mongo_collection.update({'_id': self._id}, {'$set': obj_json}, multi=False, upsert=False)
-        if not old_rel_ip:
+
+        connected[str(net.id)] = ip
+        res = self.set('connected', connected)
+
+        if link:
             self.link(net)
+        return res
 
-    def delete(self):
-        obj_json = self._get_json()
-        for network in obj_json['connected']:
-            net = Network(id = ObjectId(network), mongo_db = self._mongo_db)
-            if obj_json['connected'][network]:
-                net.release_ip(obj_json['connected'][network])
-            self.unlink(net)
-        return super(OtherDev, self).delete()
+    def release_resources(self):
+        connected = self.get('connected')
 
+        for network in connected:
+            if connected[network]:
+                net = Network(id=ObjectId(network), mongo_db=self._mongo_db)
+                net.release_ip(connected[network])
+
+        return True

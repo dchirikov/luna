@@ -1,0 +1,128 @@
+###############################################################################
+
+- name: Cleanup
+  luna_cluster:
+    state: "absent"
+  ignore_errors: true
+
+- name: Create cluster
+  luna_cluster:
+    frontend_address: "{{ luna_frontend_address }}"
+    named_include_file: "{{ luna_named_include_file }}"
+    named_zone_dir: "{{ luna_named_zone_dir }}"
+    path: "{{ luna_home }}"
+    state: "present"
+
+###############################################################################
+
+- name: Create network
+  luna_network:
+    name: "test01"
+    network: "192.16.1.0"
+    prefix: 24
+
+###############################################################################
+
+- name: Create same network
+  luna_network:
+    name: "test01"
+    network: "192.16.1.0"
+    prefix: 24
+  register: res
+
+- assert: {that: "res.changed == false"}
+
+###############################################################################
+## Create otherdev and try to delete
+
+- name: Create otherdev
+  luna_otherdev:
+    name: "pdu01"
+    connected:
+    - network: "test01"
+      ip: "192.16.1.101"
+
+- name: Delete network
+  luna_network:
+    name: "test01"
+    state: "absent"
+  ignore_errors: true
+  register: res
+
+- assert:
+    that:
+    - "res.changed == false"
+    - "res.failed == true"
+
+
+###############################################################################
+
+- name: Delete otherdev
+  luna_otherdev:
+    name: "pdu01"
+    state: "absent"
+
+- name: Delete network
+  luna_network:
+    name: "test01"
+    state: "absent"
+  register: res
+
+- assert: {that: "res.changed == true"}
+
+###############################################################################
+
+- name: Check if network if deleted
+  command: "luna network show test01"
+  ignore_errors: true
+  register: res
+
+- assert:
+    that:
+    - res.changed == true
+    - res.failed == true
+    - res.stderr == "ERROR:luna.network:Object 'test01' of type 'network' does not exist"
+
+###############################################################################
+
+- name: Create IPv6 network
+  luna_network:
+    name: "test02"
+    network: "2001:01:02:03::"
+    prefix: 64
+
+###############################################################################
+
+- name: Create same network
+  luna_network:
+    name: "test02"
+    network: "2001:01:02:03::"
+    prefix: 64
+  register: res
+
+- assert: {that: "res.changed == false"}
+
+###############################################################################
+
+- name: Delete network
+  luna_network:
+    name: "test02"
+    state: "absent"
+  register: res
+
+- assert: {that: "res.changed == true"}
+
+###############################################################################
+
+- name: Check if network if deleted
+  command: "luna network show test02"
+  ignore_errors: true
+  register: res
+
+- assert:
+    that:
+    - res.changed == true
+    - res.failed == true
+    - res.stderr == "ERROR:luna.network:Object 'test02' of type 'network' does not exist"
+
+###############################################################################

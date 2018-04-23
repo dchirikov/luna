@@ -1,0 +1,27 @@
+###############################################################################
+
+- name: Cleanup
+  luna_cluster:
+    state: "absent"
+  ignore_errors: true
+
+- name: Create cluster
+  luna_cluster:
+    frontend_address: "{{ luna_frontend_address }}"
+    path: "{{ luna_home }}"
+    state: "present"
+
+###############################################################################
+
+- name: Create bmcsetup
+  luna_bmcsetup:
+    name: "basic"
+
+###############################################################################
+
+- name: Delete bmcsetup
+  luna_bmcsetup:
+    name: "basic"
+    state: "absent"
+
+###############################################################################

@@ -1,0 +1,101 @@
+###############################################################################
+
+- name: Cleanup
+  luna_cluster:
+    state: "absent"
+  ignore_errors: true
+
+- name: Create cluster
+  luna_cluster:
+    frontend_address: "{{ luna_frontend_address }}"
+    named_include_file: "{{ luna_named_include_file }}"
+    named_zone_dir: "{{ luna_named_zone_dir }}"
+    path: "{{ luna_home }}"
+    state: "present"
+
+###############################################################################
+##  Test includes
+
+- name: Create network
+  luna_network:
+    name: "test01"
+    network: "192.16.1.0"
+    prefix: 24
+    ns_hostname: 'master'
+    ns_ip: '192.16.1.101'
+    comment: 'Created by ansible'
+    include: |
+      mail            IN A 192.16.1.102
+      @      1w       IN MX 10 mail
+    rev_include: |
+      102         IN PTR mail.test01.
+
+- name: Run makedns
+  luna_cluster:
+    makedns: true
+
+- name: Restart named
+  service:
+    name: named
+    state: restarted
+
+- set_fact:
+    ptr_rec: "{{ lookup('dig', '192.16.1.102/PTR', '@127.0.0.1') }}"
+
+- set_fact:
+    mx_rec: "{{ lookup('dig', 'test01./MX', '@127.0.0.1') }}"
+
+- assert:
+    that:
+    - "'{{ mx_rec }}' == '10 mail.test01.'"
+    - "'{{ ptr_rec }}' == 'mail.test01.'"
+
+###############################################################################
+##  Create same network
+
+- name: Create network
+  luna_network:
+    name: "test01"
+    network: "192.16.1.0"
+    prefix: 24
+    ns_hostname: 'master'
+    ns_ip: '192.16.1.101'
+    comment: 'Created by ansible'
+    include: |
+      mail            IN A 192.16.1.102
+      @      1w       IN MX 10 mail
+    rev_include: |
+      102         IN PTR mail.test01.
+  register: res
+
+- assert: {that: "{{ res.changed }} == false"}
+
+###############################################################################
+
+- name: Set expected var
+  set_fact:
+    expected:
+    - "+----------------+--------------------------------------+"
+    - "| Parameter      | Value                                |"
+    - "+----------------+--------------------------------------+"
+    - "| name           | test01                               |"
+    - "| NETWORK        | 192.16.1.0                           |"
+    - "| PREFIX         | 24                                   |"
+    - "| include        | mail            IN A 192.16.1.102    |"
+    - "|                | @      1w       IN MX 10 mail        |"
+    - "|                |                                      |"
+    - "| ns_hostname    | master                               |"
+    - "| ns_ip          | 192.16.1.101                         |"
+    - "| rev_include    | 102         IN PTR mail.test01.      |"
+    - "|                |                                      |"
+    - "| version        | 4                                    |"
+    - "| comment        | Created by ansible                   |"
+    - "+----------------+--------------------------------------+"
+
+- name: Check luna network show test01 output
+  command: "luna network show test01"
+  register: res
+
+- assert: { that: "expected == res.stdout_lines"}
+
+###############################################################################

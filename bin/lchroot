@@ -3,64 +3,45 @@ set -e
 NEED_UMOUNT_DEV=1
 NEED_UMOUNT_SYS=1
 NEED_UMOUNT_PROC=1
-trap clean EXIT
-function compile {
-    [ -e /tmp/fake_uname.so ]  && return 0
-    cat >./fake_uname.c <<EOF
-#include <unistd.h>
-#include <sys/syscall.h>
-#include <sys/types.h>
-#include <sys/utsname.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 
-int uname(struct utsname *buf) {
-    int ret;
-    ret = syscall(SYS_uname, buf);
-    char *fake_kern_ver = NULL;
-    fake_kern_ver = (char *)getenv("FAKE_KERN");
-    if (fake_kern_ver != NULL) { 
-        strcpy(buf->release, fake_kern_ver);
-    }
-    return ret;
-}
-EOF
-    gcc -Wall -fPIC -g -c -DLINUX -Wall ./fake_uname.c && gcc -shared -rdynamic  -o /tmp/fake_uname.so ./fake_uname.o -ldl
-    rm -f ./fake_uname.c
-    rm -f ./fake_uname.o
-}
 function clean {
     [ -z $CHROOT_PATH ] && return 0
     [ $NEED_UMOUNT_DEV -eq 1 ] && umount -f $CHROOT_PATH/dev
     [ $NEED_UMOUNT_PROC -eq 1 ] && umount -f $CHROOT_PATH/proc
     [ $NEED_UMOUNT_SYS -eq 1 ] && umount -f $CHROOT_PATH/sys
-    if [ $NEED_UMOUNT_DEV -eq 0 -o $NEED_UMOUNT_PROC -eq 0 -o $NEED_UMOUNT_SYS -eq 0 ]; then
-        rm -f $CHROOT_PATH/tmp/fake_uname.so
-        rm -f /tmp/fake_uname.so
-    fi
+    rm -f $CHROOT_PATH/tmp/lchroot.lock
 }
+
 function mount_d {
     mount -t devtmpfs devtmpfs  $CHROOT_PATH/dev  2>/dev/null || NEED_UMOUNT_DEV=0
     mount -t sysfs    sysfs     $CHROOT_PATH/sys  2>/dev/null || NEED_UMOUNT_SYS=0
     mount -t proc     proc      $CHROOT_PATH/proc 2>/dev/null || NEED_UMOUNT_PROC=0
 }
+
 OSIMAGE=$1
 if [ "x${OSIMAGE}" = "x" ]; then
     echo "osimage need to be specified."
     echo "Type 'luna osimage list' to get the list."
     exit 7
 fi
-FAKE_KERN=$(luna osimage show -n $OSIMAGE --kernver | awk '$2~/<=/{print $1}')
-CHROOT_PATH=$(luna osimage show -n $OSIMAGE --path)
+FAKE_KERN=$(luna osimage show $OSIMAGE --kernver | awk '$2~/<=/{print $1}')
+CHROOT_PATH=$(luna osimage show $OSIMAGE --path)
 
-mount_d
-compile
-if [ ! -e /tmp/fake_uname.so ]; then
-    >&2 echo "Cannot find fake_uname.so library"
-    exit 3
-fi
-cp /tmp/fake_uname.so $CHROOT_PATH/tmp/
+
 echo "IMAGE PATH: $CHROOT_PATH"
+if [ -f $CHROOT_PATH/tmp/lchroot.lock ]; then
+    TMP=$(cat $CHROOT_PATH/tmp/lchroot.lock)
+    echo "File $CHROOT_PATH/tmp/lchroot.lock exists."
+    echo "Currently ${TMP} is using lchroot. Exiting."
+    exit 8
+fi
+
+CUR_TTY=$(tty)
+CUR_PID=$$
+echo "PID ${CUR_PID} on ${CUR_TTY}" > $CHROOT_PATH/tmp/lchroot.lock
+
+trap clean EXIT
+mount_d
 shift
-FAKE_KERN=$FAKE_KERN LD_PRELOAD=/tmp/fake_uname.so PS1="chroot [\u@$OSIMAGE \W]\$ " chroot $CHROOT_PATH $@
+
+FAKE_KERN=$FAKE_KERN LD_PRELOAD=libluna-fakeuname.so PS1="chroot [\u@$OSIMAGE \W]\$ " chroot $CHROOT_PATH "$@"

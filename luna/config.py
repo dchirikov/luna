@@ -24,3 +24,4 @@ use_key = '_use_'
 usedby_key = '_usedby_'
 db_name = 'luna'
 torrent_key = 'Luna'
+db_version = 1.2

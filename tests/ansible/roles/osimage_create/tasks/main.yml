@@ -1,0 +1,47 @@
+###############################################################################
+
+- name: Cleanup
+  luna_cluster:
+    state: "absent"
+  ignore_errors: true
+
+- name: Create cluster
+  luna_cluster:
+    frontend_address: "{{ luna_frontend_address }}"
+    named_include_file: "{{ luna_named_include_file }}"
+    named_zone_dir: "{{ luna_named_zone_dir }}"
+    path: "{{ luna_home }}"
+    state: "present"
+
+###############################################################################
+
+- name: Add osimage
+  luna_osimage:
+    name: "{{ luna_osimage_name }}"
+    path: "{{ luna_osimage_path }}"
+  register: res
+
+- assert: {that: "res.changed == true"}
+
+###############################################################################
+
+- name: Add another osimage with same path
+  luna_osimage:
+    name: "dupicate"
+    path: "{{ luna_osimage_path }}"
+  ignore_errors: true
+  register: res
+
+- assert: {that: "res.failed == true" }
+
+###############################################################################
+
+- name: Delete osimage
+  luna_osimage:
+    name: "{{ luna_osimage_name }}"
+    state: absent
+  register: res
+
+- assert: {that: "res.changed == true"}
+
+###############################################################################

@@ -281,7 +281,7 @@ def update_torrents():
         try:
             file_extention = filename[-8:]
         except:
-            logger.error("File '{}' seems not to be a torrent file".forman(filename))
+            logger.error("File '{}' seems not to be a torrent file".format(filename))
             continue
         if not (os.path.isfile(filename) and file_extention == '.torrent'):
             continue
@@ -399,7 +399,7 @@ def start_torrent_client():
     portmax = cluster.get('torrent_listen_port_max') or 7200
 
     try:
-        t_session = lt.session()
+        t_session = lt.session(flags=0)
     except:
         logger.error("Failed to open libtorrent session.")
         raise RuntimeError
@@ -408,6 +408,7 @@ def start_torrent_client():
         # Set the ip parameter in announce requests; default: ip ignored
         settings = lt.session_settings()
         settings.announce_ip = ip
+        settings.ssl_listen = 0
 
         t_session.set_settings(settings)
         t_session.listen_on(portmin, portmax, ip)

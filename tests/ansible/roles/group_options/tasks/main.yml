@@ -1,0 +1,152 @@
+###############################################################################
+
+- name: Cleanup
+  luna_cluster:
+    state: "absent"
+  ignore_errors: true
+
+- name: Create cluster
+  luna_cluster:
+    frontend_address: "{{ luna_frontend_address }}"
+    named_include_file: "{{ luna_named_include_file }}"
+    named_zone_dir: "{{ luna_named_zone_dir }}"
+    path: "{{ luna_home }}"
+    state: "present"
+
+- name: Create bmcsetup
+  luna_bmcsetup:
+    name: "basic"
+
+- name: Create symlink
+  file:
+    src: "{{ luna_osimage_path }}"
+    dest: "/tmp/osimage"
+    state: link
+
+- name: Add osimage
+  luna_osimage:
+    name: "compute-test-osimage"
+    path: "/tmp/osimage"
+
+- name: Create network
+  luna_network:
+    name: "test01"
+    network: "192.168.1.0"
+    prefix: 24
+
+- name: Create bmc network
+  luna_network:
+    name: "test02"
+    network: "192.168.2.0"
+    prefix: 24
+
+###############################################################################
+
+- name: Create group
+  luna_group:
+    name: "compute-test-group"
+    osimage: "compute-test-osimage"
+    bmcsetup: "basic"
+    comment: "Created by ansible"
+    interfaces:
+    - name: "BOOTIF"
+      networks:
+      - "test01"
+    - name: "BMC"
+      networks:
+      - "test02"
+
+- name: Create same group
+  luna_group:
+    name: "compute-test-group"
+    osimage: "compute-test-osimage"
+    bmcsetup: "basic"
+    comment: "Created by ansible"
+    interfaces:
+    - name: "BOOTIF"
+      networks:
+      - "test01"
+    - name: "BMC"
+      networks:
+      - "test02"
+  register: res
+
+- assert: {that: "res.changed == false"}
+
+###############################################################################
+##  Check luna group show output
+
+- name: Set expected var
+  set_fact:
+    expected:
+    - "+---------------+-------------------------------------------------+"
+    - "| Parameter     | Value                                           |"
+    - "+---------------+-------------------------------------------------+"
+    - "| name          | compute-test-group                              |"
+    - "| bmcsetup      | [basic]                                         |"
+    - "| domain        | -                                               |"
+    - "| interfaces    | [BMC]:   [test02]:192.168.2.0/24                |"
+    - "|               | [BOOTIF]:[test01]:192.168.1.0/24                |"
+    - "| osimage       | [compute-test-osimage]                          |"
+    - "| partscript    | mount -t tmpfs tmpfs /sysroot                   |"
+    - "| postscript    | cat << EOF >> /sysroot/etc/fstab                |"
+    - "|               | tmpfs   /       tmpfs    defaults        0 0    |"
+    - "|               | EOF                                             |"
+    - "| prescript     | -                                               |"
+    - "| torrent_if    | -                                               |"
+    - "| comment       | Created by ansible                              |"
+    - "+---------------+-------------------------------------------------+"
+
+- name: Check luna group show output
+  command: "luna group show compute-test-group"
+  register: res
+
+- assert: { that: "expected == res.stdout_lines"}
+
+
+
+###############################################################################
+##  Change interface name (under the hood it deletes and adds other interface)
+
+- name: Change interface name
+  luna_group:
+    name: "compute-test-group"
+    osimage: "compute-test-osimage"
+    bmcsetup: "basic"
+    comment: "Created by ansible"
+    interfaces:
+    - name: "eth0"
+      networks:
+      - "test01"
+    - name: "BMC"
+      networks:
+      - "test02"
+
+- name: Set expected var
+  set_fact:
+    expected:
+    - "+---------------+-------------------------------------------------+"
+    - "| Parameter     | Value                                           |"
+    - "+---------------+-------------------------------------------------+"
+    - "| name          | compute-test-group                              |"
+    - "| bmcsetup      | [basic]                                         |"
+    - "| domain        | -                                               |"
+    - "| interfaces    | [BMC]: [test02]:192.168.2.0/24                  |"
+    - "|               | [eth0]:[test01]:192.168.1.0/24                  |"
+    - "| osimage       | [compute-test-osimage]                          |"
+    - "| partscript    | mount -t tmpfs tmpfs /sysroot                   |"
+    - "| postscript    | cat << EOF >> /sysroot/etc/fstab                |"
+    - "|               | tmpfs   /       tmpfs    defaults        0 0    |"
+    - "|               | EOF                                             |"
+    - "| prescript     | -                                               |"
+    - "| torrent_if    | -                                               |"
+    - "| comment       | Created by ansible                              |"
+    - "+---------------+-------------------------------------------------+"
+
+- name: Check luna osimage show output
+  command: "luna group show compute-test-group"
+  register: res
+
+- assert: { that: "expected == res.stdout_lines"}
+
+###############################################################################

@@ -1,0 +1,111 @@
+###############################################################################
+
+- name: Cleanup
+  luna_cluster:
+    state: "absent"
+  ignore_errors: true
+
+- name: Create cluster
+  luna_cluster:
+    frontend_address: "{{ luna_frontend_address }}"
+    named_include_file: "{{ luna_named_include_file }}"
+    named_zone_dir: "{{ luna_named_zone_dir }}"
+    path: "{{ luna_home }}"
+    state: "present"
+
+- name: Include to /etc/named.conf
+  lineinfile:
+    path: /etc/named.conf
+    line: "include \"{{ luna_named_include_file }}\";"
+
+###############################################################################
+
+- name: Create network 1
+  luna_network:
+    name: "{{ luna_cluster_net_name }}"
+    network: "{{ luna_cluster_net }}"
+    prefix: "{{ luna_cluster_net_prefix }}"
+
+- name: Create network 2
+  luna_network:
+    name: "{{ luna_bmc_net_name }}"
+    network: "{{ luna_bmc_net }}"
+    prefix: "{{ luna_bmc_net_prefix }}"
+
+- name: Create network 3
+  luna_network:
+    name: "service"
+    network: "192.168.0.0"
+    prefix: 24
+
+- name: Add osimage
+  luna_osimage:
+    name: "{{ luna_osimage_name }}"
+    path: "{{ luna_osimage_path }}"
+
+- name: Create group
+  luna_group:
+    name: "{{ luna_group_name }}"
+    osimage: "{{ luna_osimage_name }}"
+    interfaces:
+    - name: "BOOTIF"
+      networks:
+      - "{{ luna_cluster_net_name }}"
+      params: "MTU=1500"
+    - name: "BMC"
+      networks:
+      - "{{ luna_bmc_net_name }}"
+
+- name: Add node
+  luna_node:
+    name: "{{ luna_node_name }}"
+    group: "{{ luna_group_name }}"
+    interfaces:
+    - name: "BOOTIF"
+      ip:
+      - "{{ luna_node_ip_cluster }}"
+    - name: "BMC"
+      ip:
+      - "{{ luna_node_ip_bmc }}"
+    mac: "{{ luna_node_mac }}"
+
+- name: Add switch
+  luna_switch:
+    name: "switch01"
+    network: "service"
+    ip: "192.168.0.101"
+
+- name: Add otherdev
+  luna_switch:
+    name: "pdu01"
+    network: "service"
+    ip: "192.168.0.102"
+
+- name: makedns
+  luna_cluster:
+    makedns: true
+
+- name: Restart named
+  service:
+    name: named
+    state: restarted
+
+- set_fact: {ip: "{{ lookup('dig', '{{ luna_node_name }}.{{ luna_cluster_net_name }}.', '@127.0.0.1') }}"}
+- assert: {that: "'{{ ip }}' == '{{ luna_node_ip_cluster }}'"}
+
+- set_fact: {ip: "{{ lookup('dig', '{{ luna_node_name }}.{{ luna_bmc_net_name }}.', '@127.0.0.1') }}"}
+- assert: {that: "'{{ ip }}' == '{{ luna_node_ip_bmc }}'"}
+
+- set_fact: {ip: "{{ lookup('dig', 'switch01.service.', '@127.0.0.1') }}"}
+- assert: {that: "'{{ ip }}' == '192.168.0.101'"}
+
+- set_fact: {hostn: "{{ lookup('dig', '192.168.0.101/PTR', '@127.0.0.1') }}"}
+- assert: {that: "'{{ hostn }}' == 'switch01.service.'"}
+
+- set_fact: {ip: "{{ lookup('dig', 'pdu01.service.', '@127.0.0.1') }}"}
+- assert: {that: "'{{ ip }}' == '192.168.0.102'"}
+
+- set_fact: {hostn: "{{ lookup('dig', '192.168.0.102/PTR', '@127.0.0.1') }}"}
+- assert: {that: "'{{ hostn }}' == 'pdu01.service.'"}
+
+###############################################################################

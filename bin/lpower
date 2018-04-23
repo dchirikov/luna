@@ -23,88 +23,137 @@ along with Luna.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
 import hostlist
-import subprocess
-import threading
 import argparse
 import pymongo
+import subprocess
+import threading
 import luna
-from luna import utils
 
 
 class ChassisAction(threading.Thread):
-    def __init__(self, nodename = None, op = None, mongo_db = None):
+
+    def __init__(self, nodename=None, op=None, interface=None, mongo_db=None):
         threading.Thread.__init__(self)
         self.op = None
-        if op in ['on', 'off', 'reset', 'cycle', 'status', 'identify', 'noidentify']:
+
+        ops = ['on', 'off', 'reset', 'cycle', 'status',
+               'identify', 'noidentify']
+
+        if op in ops:
             self.op = op
+
         try:
-            node = luna.Node(name = nodename, mongo_db = mongo_db)
+            node = luna.Node(name=nodename, mongo_db=mongo_db)
         except RuntimeError:
             self.op = None
+
         if self.op:
-            try:
-                self.bmcip = node.install_params['bmcsetup']['ip']
-            except KeyError:
-                logger.info("No BMC setup configured for '{}'".format(nodename))
+            self.bmcip = node.get_ip(interface,version=4)
+
+            if self.bmcip:
+                self.nodename = nodename
+                try:
+                    self.user = node.install_params['bmcsetup']['user']
+                    self.password = node.install_params['bmcsetup']['password']
+                except KeyError:
+                    log.error('BMCSetup is not configured for "{}"'
+                              .format(nodename))
+                    self.op = None
+
+            else:
                 self.op = None
-        if self.op:
-            self.nodename = nodename
-            self.bmcip = node.install_params['bmcsetup']['ip']
-            self.user = node.install_params['bmcsetup']['user']
-            self.password = node.install_params['bmcsetup']['password']
 
     def run(self):
+
         if not self.op:
             return None
+
         cmd = ['/usr/bin/ipmitool', '-I', 'lanplus',
-                '-H', self.bmcip,
-                '-U', self.user,
-                '-P', self.password,
-                'chassis']
+               '-H', self.bmcip,
+               '-U', self.user,
+               '-P', self.password,
+               'chassis']
+
         if self.op in ['on', 'off', 'reset', 'cycle']:
             cmd.extend(['power', self.op])
+
         elif self.op == 'status':
             cmd.extend([self.op])
+
         elif self.op == 'identify':
-            cmd.extend([self.op, '255']) # longest interval it allows
+            cmd.extend([self.op, '255'])  # longest interval it allows
+
         elif self.op == 'noidentify':
             cmd.extend(['identify', '0'])
-        """
-        ping_proc = subprocess.Popen(['/bin/ping', '-c', '1', '-w', '5', self.bmcip], stdout=subprocess.PIPE)
-        if ping_proc.wait():
-            print self.nodename + ': No ping'
-            return
-        """
-        ipmi_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+        ipmi_proc = subprocess.Popen(cmd,
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.STDOUT)
+
         while ipmi_proc.poll() is None:
-            line = ipmi_proc.stdout.readline()
+            line = ipmi_proc.stdout.readline().strip()
+
             if line[:12] == 'System Power':
-                print self.nodename + ': ' + line.strip().split(" ")[-1]
+                print self.nodename + ': ' + line.split(" ")[-1]
+
             if line[:5] == 'Error':
-                print self.nodename + ': ' + line.strip()
+                print self.nodename + ': ' + line
+
         if self.op in ['on', 'off', 'reset', 'cycle']:
             print self.nodename + ': ' + self.op
 
 
-parser = argparse.ArgumentParser(prog='lpower',description='BMC power management.')
-parser.add_argument('hostlist', type=str, help='Hostlist')
-parser.add_argument('action', choices=('status', 'on', 'off', 'reset', 'cycle', 'identify', 'noidentify'), help='Action')
+parser = argparse.ArgumentParser(prog='lpower',
+                                 description='BMC power management.')
+
+parser.add_argument('hosts', type=str, nargs='?',
+                    help='Host list')
+parser.add_argument('--groups', '-g', type=str,
+                    help='Group list')
+parser.add_argument('--interface', '-i', type=str, default='BMC',
+                    help='Interface to use instead of "BMC"')
+parser.add_argument('action',
+                    choices=('status', 'on', 'off', 'reset',
+                             'cycle', 'identify', 'noidentify'),
+                    help='Action')
 
 
 if __name__ == '__main__':
-    logger = logging.getLogger('lpower')
+    log = logging.getLogger('lpower')
     args = parser.parse_args()
-    hosts = hostlist.expand_hostlist(args.hostlist)
+
     try:
-        mongo_client = pymongo.MongoClient(utils.helpers.get_con_options())
+        con_options = luna.utils.helpers.get_con_options()
+        mongo_client = pymongo.MongoClient(**con_options)
     except:
-        self.logger.error("Unable to connect to MongoDB.")
+        log.error("Unable to connect to MongoDB.")
         raise RuntimeError
+
     mongo_db = mongo_client[luna.db_name]
+
     threads = []
-    for host in hosts:
-        ca = ChassisAction(host, args.action, mongo_db)
-        ca.start()
-        threads.append(ca)
 
+    if args.hosts:
+        hosts = hostlist.expand_hostlist(args.hosts)
 
+        for host in hosts:
+            ca = ChassisAction(host, args.action, args.interface, mongo_db)
+            ca.start()
+            threads.append(ca)
+
+    if args.groups:
+        groups = hostlist.expand_hostlist(args.groups)
+
+        for group in groups:
+
+            try:
+                g = luna.Group(name=group, mongo_db=mongo_db)
+            except RuntimeError:
+                continue
+
+            hosts = g.list_nodes().keys()
+
+            for host in hosts:
+                ca = ChassisAction(host, args.action, args.interface, mongo_db)
+                ca.start()
+                threads.append(ca)

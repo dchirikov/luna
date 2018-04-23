@@ -1,0 +1,129 @@
+###############################################################################
+
+- name: Cleanup
+  luna_cluster:
+    state: "absent"
+  ignore_errors: true
+
+###############################################################################
+
+- name: Create cluster
+  luna_cluster:
+    frontend_address: "{{ luna_frontend_address }}"
+    path: "{{ luna_home }}"
+    state: "present"
+  register: res
+
+- assert: { that: "res.changed == true" }
+
+###############################################################################
+
+- name: Set the same options to check if no changes will appear
+  luna_cluster:
+    frontend_address: "{{ luna_frontend_address }}"
+    path: "{{ luna_home }}"
+    nodeprefix: "node"
+    nodedigits: 3
+    user: "luna"
+    state: "present"
+  register: res
+  ignore_errors: true
+
+- assert: { that: "res.changed == false" }
+
+###############################################################################
+
+- name: Change path to unexisting dir
+  luna_cluster:
+    path: "/nonexist_dir"
+  register: res
+  ignore_errors: true
+
+- assert: { that: "res.failed == true" }
+
+
+###############################################################################
+
+- name: Set unexisting user
+  luna_cluster:
+    user: "nonexist"
+  register: res
+  ignore_errors: true
+
+- assert: { that: "res.failed == true" }
+
+###############################################################################
+
+- name: Delete cluster
+  luna_cluster:
+    state: "absent"
+  register: res
+
+- assert: { that: "res.changed == true" }
+
+###############################################################################
+
+- name: Change a test cluster again
+  luna_cluster:
+    frontend_address: 10.141.255.254
+    frontend_port: 8050
+    server_port: 8051
+    torrent_listen_port_max: 8100
+    torrent_listen_port_min: 8052
+    torrent_pidfile: /run/luna/ltorrent.pid
+    tracker_interval: 20
+    tracker_maxpeers: 210
+    tracker_min_interval: 10
+    lweb_num_proc: 10
+    lweb_pidfile: /run/luna/lweb.pid
+    named_include_file: /etc/named.luna.zones
+    named_zone_dir: /var/named
+    path: /opt/luna/
+    comment: "Changed by ansible"
+    state: "present"
+  register: res
+
+- assert: { that: "res.changed == true" }
+
+###############################################################################
+##  Check luna cluster show output
+
+- name: Set expected var
+  set_fact:
+    expected:
+    - "+----------------------------+---------------------------+"
+    - "| Parameter                  | Value                     |"
+    - "+----------------------------+---------------------------+"
+    - "| cluster_ips                | -                         |"
+    - "| debug                      | 0                         |"
+    - "| dhcp_net                   | -                         |"
+    - "| dhcp_range_end             | -                         |"
+    - "| dhcp_range_start           | -                         |"
+    - "| frontend_address           | 10.141.255.254            |"
+    - "| frontend_https             | no                        |"
+    - "| frontend_port              | 8050                      |"
+    - "| lweb_num_proc              | 10                        |"
+    - "| lweb_pidfile               | /run/luna/lweb.pid        |"
+    - "| named_include_file         | /etc/named.luna.zones     |"
+    - "| named_zone_dir             | /var/named                |"
+    - "| nodedigits                 | 3                         |"
+    - "| nodeprefix                 | node                      |"
+    - "| path                       | /opt/luna                 |"
+    - "| server_port                | 8051                      |"
+    - "| torrent_listen_port_max    | 8100                      |"
+    - "| torrent_listen_port_min    | 8052                      |"
+    - "| torrent_pidfile            | /run/luna/ltorrent.pid    |"
+    - "| tracker_interval           | 20                        |"
+    - "| tracker_maxpeers           | 210                       |"
+    - "| tracker_min_interval       | 10                        |"
+    - "| user                       | luna                      |"
+    - "| comment                    | Changed by ansible        |"
+    - "+----------------------------+---------------------------+"
+
+- name: Check luna cluster show output
+  command: "luna cluster show"
+  register: res
+
+- assert: { that: "expected == res.stdout_lines"}
+
+###############################################################################

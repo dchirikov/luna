@@ -1,0 +1,39 @@
+###############################################################################
+
+- name: Cleanup
+  luna_cluster:
+    state: "absent"
+  ignore_errors: true
+
+###############################################################################
+
+- name: Create cluster
+  luna_cluster:
+    path: "{{ luna_home }}"
+    frontend_address: "{{ luna_frontend_address }}"
+    state: "present"
+  register: res
+
+- assert: { that: "res.changed == true" }
+
+###############################################################################
+
+- name: Delete cluster
+  luna_cluster:
+    state: "absent"
+  register: res
+
+- assert: { that: "res.changed == true" }
+
+###############################################################################
+
+- name: Create cluster with wrong path
+  luna_cluster:
+    frontend_address: "{{ luna_frontend_address }}"
+    path: "/nonexist_dir/"
+  register: res
+  ignore_errors: true
+
+- assert: { that: "res.failed == true" }
+
+###############################################################################

@@ -1,0 +1,87 @@
+###############################################################################
+
+- name: Cleanup
+  luna_cluster:
+    state: "absent"
+  ignore_errors: true
+
+- name: Create cluster
+  luna_cluster:
+    frontend_address: "{{ luna_frontend_address }}"
+    path: "{{ luna_home }}"
+    state: "present"
+
+- name: Create networks
+  luna_network:
+    name: "net0{{ item }}"
+    network: "192.168.{{ item }}.0"
+    prefix: 24
+  with_items: [1, 2]
+
+###############################################################################
+
+- name: Create switch
+  luna_switch:
+    name: "switch01"
+    oid: ".1.3.1.1.1.1.1.1.1.1.1.1.1.1"
+    read: "ro_community"
+    rw: "rw_community"
+    comment: "Created by Ansible"
+    network: "net01"
+    ip: "192.168.1.1"
+
+- name: Set expected var
+  set_fact:
+    expected:
+    - "+--------------+---------------------------------+"
+    - "| Parameter    | Value                           |"
+    - "+--------------+---------------------------------+"
+    - "| name         | switch01                        |"
+    - "| ip           | 192.168.1.1                     |"
+    - "| network      | [net01]                         |"
+    - "| oid          | .1.3.1.1.1.1.1.1.1.1.1.1.1.1    |"
+    - "| read         | ro_community                    |"
+    - "| rw           | rw_community                    |"
+    - "| comment      | Created by Ansible              |"
+    - "+--------------+---------------------------------+"
+
+- name: Check luna switch show output
+  command: "luna switch show switch01"
+  register: res
+
+- assert: { that: "expected == res.stdout_lines"}
+
+###############################################################################
+
+- name: Change network
+  luna_switch:
+    name: "switch01"
+    oid: ".1.3.1.1.1.1.1.1.1.1.1.1.1.1"
+    read: "ro_community"
+    rw: "rw_community"
+    comment: "Created by Ansible"
+    network: "net02"
+    ip: "192.168.2.1"
+
+- name: Set expected var
+  set_fact:
+    expected:
+    - "+--------------+---------------------------------+"
+    - "| Parameter    | Value                           |"
+    - "+--------------+---------------------------------+"
+    - "| name         | switch01                        |"
+    - "| ip           | 192.168.2.1                     |"
+    - "| network      | [net02]                         |"
+    - "| oid          | .1.3.1.1.1.1.1.1.1.1.1.1.1.1    |"
+    - "| read         | ro_community                    |"
+    - "| rw           | rw_community                    |"
+    - "| comment      | Created by Ansible              |"
+    - "+--------------+---------------------------------+"
+
+- name: Check luna switch show output
+  command: "luna switch show switch01"
+  register: res
+
+- assert: { that: "expected == res.stdout_lines"}
+
+###############################################################################

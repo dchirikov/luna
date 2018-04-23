@@ -1,0 +1,7 @@
+---
+- hosts: localhost
+  roles:
+  - role: group_create
+    tags: create
+  - role: group_options
+    tags: options

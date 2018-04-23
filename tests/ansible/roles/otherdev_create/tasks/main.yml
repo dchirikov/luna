@@ -1,0 +1,52 @@
+###############################################################################
+
+- name: Cleanup
+  luna_cluster:
+    state: "absent"
+  ignore_errors: true
+
+- name: Create cluster
+  luna_cluster:
+    frontend_address: "{{ luna_frontend_address }}"
+    path: "{{ luna_home }}"
+    state: "present"
+
+- name: Create network
+  luna_network:
+    name: "{{ luna_bmc_net_name }}"
+    network: "{{ luna_bmc_net }}"
+    prefix: "{{ luna_bmc_net_prefix }}"
+
+###############################################################################
+
+- name: Create otherdev
+  luna_otherdev:
+    name: "{{ luna_otherdev_name }}"
+    connected:
+    - network: "{{ luna_otherdev_net }}"
+      ip: "{{ luna_otherdev_ip }}"
+
+###############################################################################
+
+- name: Delete otherdev
+  luna_otherdev:
+    name: "{{ luna_otherdev_name }}"
+    state: "absent"
+  register: res
+
+- assert: {that: "res.changed == true"}
+
+###############################################################################
+
+- name: Check if otherdev is deleted
+  command: "luna otherdev show {{ luna_otherdev_name }}"
+  ignore_errors: true
+  register: res
+
+- assert:
+    that:
+    - res.changed == true
+    - res.failed == true
+    - res.stderr == "ERROR:luna.otherdev:Object '{{ luna_otherdev_name }}' of type 'otherdev' does not exist"
+
+###############################################################################

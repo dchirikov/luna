@@ -1,0 +1,135 @@
+###############################################################################
+
+- name: Cleanup
+  luna_cluster:
+    state: absent
+  ignore_errors: true
+
+- name: Create cluster
+  luna_cluster:
+    frontend_address: "{{ luna_frontend_address }}"
+    path: "{{ luna_home }}"
+    state: "present"
+
+###############################################################################
+##  Initial makedhcp
+
+- name: Create network
+  luna_network:
+    name: "{{ luna_cluster_net_name }}"
+    network: "{{ luna_cluster_net }}"
+    prefix: "{{ luna_cluster_net_prefix }}"
+
+- name: Delete {{ luna_dhcpd_conf_file }}
+  file:
+    path: "{{ luna_dhcpd_conf_file }}"
+    state: "absent"
+
+- name: makedhcp
+  luna_cluster:
+    makedhcp: true
+    dhcp_net: "{{ luna_luna_dhcp_net }}"
+    dhcp_range_start: "{{ luna_dhcp_range_start }}"
+    dhcp_range_end: "{{ luna_dhcp_range_end }}"
+  register: res
+
+- assert: { that: "res.changed == true" }
+
+- stat:
+    path: "{{ luna_dhcpd_conf_file }}"
+  register: res
+
+- assert: { that: "res.stat.exists == true" }
+
+- name: Validate dhcpd config
+  command: "dhcpd -t -cf {{ luna_dhcpd_conf_file }}"
+
+
+###############################################################################
+##  Set same parameters
+
+- name: Delete {{ luna_dhcpd_conf_file }}
+  file:
+    path: "{{ luna_dhcpd_conf_file }}"
+    state: "absent"
+
+- name: makedhcp
+  luna_cluster:
+    makedhcp: true
+    dhcp_net: "{{ luna_luna_dhcp_net }}"
+    dhcp_range_start: "{{ luna_dhcp_range_start }}"
+    dhcp_range_end: "{{ luna_dhcp_range_end }}"
+  register: res
+
+- assert: { that: "res.changed == false" }
+
+- stat:
+    path: "{{ luna_dhcpd_conf_file }}"
+  register: res
+
+- assert: { that: "res.stat.exists == false" }
+
+###############################################################################
+##  Change parameters
+
+- name: Delete {{ luna_dhcpd_conf_file }}
+  file:
+    path: "{{ luna_dhcpd_conf_file }}"
+    state: "absent"
+
+- name: makedhcp
+  luna_cluster:
+    makedhcp: true
+    dhcp_net: "{{ luna_luna_dhcp_net }}"
+    dhcp_range_start: "{{ luna_dhcp_range_start }}"
+    dhcp_range_end: "{{ luna_dhcp_range_end_other }}"
+  register: res
+
+- assert: { that: "res.changed == true" }
+
+- stat:
+    path: "{{ luna_dhcpd_conf_file }}"
+  register: res
+
+- assert: { that: "res.stat.exists == true" }
+
+- name: Validate dhcpd config
+  command: "dhcpd -t -cf {{ luna_dhcpd_conf_file }}"
+
+###############################################################################
+##  Mac adress reservation
+
+- name: Add osimage
+  luna_osimage:
+    name: "{{ luna_osimage_name }}"
+    path: "{{ luna_osimage_path }}"
+
+- name: Create group
+  luna_group:
+    name: "{{ luna_group_name }}"
+    osimage: "{{ luna_osimage_name }}"
+    interfaces:
+    - name: "BOOTIF"
+      networks:
+      - "{{ luna_cluster_net_name }}"
+
+- name: Add node
+  luna_node:
+    name: "{{ luna_node_name }}"
+    group: "{{ luna_group_name }}"
+    interfaces:
+    - name: "BOOTIF"
+      ip:
+      - "{{ luna_node_ip_cluster }}"
+    mac: "{{ luna_node_mac }}"
+
+- name: makedhcp
+  luna_cluster:
+    makedhcp: true
+
+- name: Check dhcpd config
+  lineinfile:
+    path: "{{ luna_dhcpd_conf_file }}"
+    line: "    hardware ethernet {{ luna_node_mac }};"
+
+###############################################################################

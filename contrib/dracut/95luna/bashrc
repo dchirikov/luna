@@ -3,4 +3,4 @@ alias ll='ls -l'
 alias vim='vi'
 alias grep='grep --color'
 export TERM=linux
-export PS1="\[\e[1;36m\]lunainstaller [\u@\h \W]\$\[\e[0m\] "
+export PS1="\[\e[1;36m\]lunainstaller$(/usr/bin/grep -q -w luna.service=1 /proc/cmdline && echo '\[\e[1;31m\](service)\[\e[0m\]')[\u@\h \W]\$\[\e[0m\] "

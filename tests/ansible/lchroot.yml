@@ -1,0 +1,11 @@
+---
+- hosts: localhost
+  roles:
+  - role: lchroot_create
+    tags: create
+
+- hosts: compute.osimages.luna
+  roles:
+  - role: lchroot_operate
+    tags: operate
+

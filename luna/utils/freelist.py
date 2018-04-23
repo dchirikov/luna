@@ -86,11 +86,11 @@ def unfree_range(flist, start, end=None):
     first_free = flist[0]['start']
     last_free = flist[-1]['end']
 
-    if start not in range(first_free, last_free + 1):
+    if not (first_free <= start <= last_free):
         log.error("Requested IP '{}' is out of range".format(start))
         return (flist, None)
 
-    if end not in range(first_free, last_free + 1):
+    if not (first_free <= end <= last_free):
         log.error("Requested IP '{}' is out of range".format(end))
         return (flist, None)
 
@@ -102,8 +102,8 @@ def unfree_range(flist, start, end=None):
     index = -1
     for i, frange in enumerate(flist):
 
-        if (start in range(frange['start'], frange['end'] + 1) and
-                end in range(frange['start'], frange['end'] + 1)):
+        if ((frange['start'] <= start <= frange['end']) and
+                (frange['start'] <= end <= frange['end'])):
 
             index = i
 
@@ -165,8 +165,9 @@ def free_range(flist, start, end=None):
         if i == len(tmp_list) - 1:
             new_list.append(tmp_list[i])
 
-        elif tmp_list[i + 1]['start'] in range(tmp_list[i]['start'],
-                                               tmp_list[i]['end'] + 2):
+        elif (tmp_list[i]['start']
+                <= tmp_list[i + 1]['start']
+                <= tmp_list[i]['end'] + 1):
             s = tmp_list[i]['start']
             e = tmp_list[i]['end']
 
@@ -194,22 +195,25 @@ def free_range(flist, start, end=None):
         return (new_list, [start, end])
 
 
-def set_upper_limit(flist, end):
+def set_upper_limit(flist, end, prev_end):
     """
     Update a freelists's uppper end. We assume that a freelist is always
     sorted since the only operation that might alter the order (free_range)
     does perform a sort on the freelist.
     """
 
-    last_range = flist[-1]
+    last_ip = flist[-1]['start'] - 1 # last occupied ip
+    if flist[-1]['end'] != prev_end:
+        last_ip = prev_end
 
     # Make sure the new 'end' does not exclude some non-free elements
 
-    if last_range['start'] > end:
-        log.error(("Cannot update freelist upper limit. "
-                   "This new limit excludes some already nonfree elements"))
-        raise RuntimeError
-
+    if last_ip > end:
+        err_msg = ("Cannot update freelist upper limit. " +
+                   "This new limit excludes some already nonfree elements")
+        log.error(err_msg)
+        raise RuntimeError, err_msg
+    last_range = flist[-1]
     flist[-1] = {'start': last_range['start'], 'end': end}
 
     return flist
@@ -222,9 +226,10 @@ def get_nonfree(flist, limit=None):
     """
 
     if not bool(flist) and (limit is None):
-        log.error("freelist is empty. "
-                  "You must provide a boundary (network prefix)")
-        raise RuntimeError
+        err_msg = ("freelist is empty. " +
+                   "You must provide a boundary (network prefix)")
+        log.error(err_msg)
+        raise RuntimeError, err_msg
 
     elif not bool(flist):
         return range(1, limit)
@@ -234,8 +239,10 @@ def get_nonfree(flist, limit=None):
 
     nonfree_list = []
 
-    for i in range(1, last_nonfree):
-        if i in range(flist[0]['start'], flist[0]['end'] + 1):
+    i = 0
+    while i < last_nonfree:
+        i += 1
+        if (flist[0]['start'] <= i <= flist[0]['end']):
             continue
 
         if i > flist[0]['end']:

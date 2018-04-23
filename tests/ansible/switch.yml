@@ -1,0 +1,7 @@
+---
+- hosts: localhost
+  roles:
+  - role: switch_create
+    tags: create
+  - role: switch_options
+    tags: options

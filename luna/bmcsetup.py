@@ -20,11 +20,7 @@ along with Luna.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
 
-from config import *
-
 import logging
-
-from bson.dbref import DBRef
 
 from luna.base import Base
 from luna.cluster import Cluster
@@ -41,7 +37,7 @@ class BMCSetup(Base):
 
     def __init__(self, name=None, mongo_db=None, create=False, id=None,
                  userid=3, user='ladmin', password='ladmin',
-                 netchannel=1, mgmtchannel=1):
+                 netchannel=1, mgmtchannel=1, comment=''):
         """
         userid      - default user id
         user        - username
@@ -55,14 +51,19 @@ class BMCSetup(Base):
         # Define the schema used to represent BMC configuration objects
 
         self._collection_name = 'bmcsetup'
-        self._keylist = {'userid': type(0),
-                         'user': type(''), 'password': type(''),
-                         'netchannel': type(0), 'mgmtchannel': type(0)}
+        self._keylist = {
+            'userid': type(0),
+            'user': type(''),
+            'password': type(''),
+            'netchannel': type(0),
+            'mgmtchannel': type(0),
+            'comment': type(''),
+        }
 
         # Check if this BMC config is already present in the datastore
         # Read it if that is the case
 
-        bmc = self._check_name(name, mongo_db, create, id)
+        bmc = self._get_object(name, mongo_db, create, id)
 
         if create:
             cluster = Cluster(mongo_db=self._mongo_db)
@@ -74,31 +75,23 @@ class BMCSetup(Base):
 
             for key in self._keylist:
                 if type(args[key]) is not self._keylist[key]:
-                    self.log.error(("Argument '{}' should be '{}'"
-                                    .format(key, self._keylist[key])))
-                    raise RuntimeError
-
-            # Define a new mongo document
-
-            bmc = {'name': name, 'userid': userid, 'user': user,
-                   'password': password, 'netchannel': netchannel,
-                   'mgmtchannel': mgmtchannel}
+                    err_msg =  ("Argument '{}' should be '{}'"
+                                .format(key, self._keylist[key]))
+                    self.log.error(err_msg)
+                    raise RuntimeError, err_msg
 
             # Store the new BMC config in the datastore
 
+            bmc = {'name': name, 'userid': userid, 'user': user,
+                   'password': password, 'netchannel': netchannel,
+                   'mgmtchannel': mgmtchannel, 'comment': comment}
+
             self.log.debug("Saving BMC conf '{}' to the datastore".format(bmc))
 
-            self._name = name
-            self._id = self._mongo_collection.insert(bmc)
-            self._DBRef = DBRef(self._collection_name, self._id)
+            self.store(bmc)
 
             # Link this BMC config to the current cluster
 
             self.link(cluster)
-
-        else:
-            self._name = bmc['name']
-            self._id = bmc['_id']
-            self._DBRef = DBRef(self._collection_name, self._id)
 
         self.log = logging.getLogger(__name__ + '.' + self._name)

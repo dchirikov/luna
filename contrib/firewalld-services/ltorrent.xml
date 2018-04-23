@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<service>
+	<short>Ltorrent</short>
+	<description>Ltorrent</description>
+	<port port="7052-7200" protocol="tcp"/>
+	<port port="7052-7200" protocol="udp"/>
+</service>

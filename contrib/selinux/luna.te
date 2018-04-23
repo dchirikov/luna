@@ -1,0 +1,207 @@
+policy_module(luna, 1.2.0)
+
+########################################
+#
+# Declarations
+#
+
+
+require {
+    type sysadm_t;
+    type unconfined_t;
+    type init_t;
+    type init_var_run_t;
+    type bin_t;
+    type ldconfig_exec_t;
+    type mongod_port_t;
+    type net_conf_t;
+    type node_t;
+    type shell_exec_t;
+    type passwd_file_t;
+    type proc_t;
+    type user_devpts_t;
+    type httpd_t;
+    type named_conf_t;
+    type fs_t;
+    type proc_net_t;
+    type debugfs_t;
+    type fuse_device_t;
+    type fusefs_t;
+    type kernel_t;
+    type tftpdir_t;
+    type tftpd_t;
+    role unconfined_r;
+    role sysadm_r;
+}
+
+# common luna types
+type luna_log_t;
+type luna_conf_t;
+type luna_var_run_t;
+type luna_frontend_port_t;
+corenet_port(luna_frontend_port_t);
+
+type luna_torrent_files_t;
+files_type(luna_torrent_files_t)
+
+type luna_boot_files_t;
+files_type(luna_boot_files_t)
+
+files_pid_file(luna_var_run_t);
+logging_log_file(luna_log_t);
+files_config_file(luna_conf_t);
+
+
+# lweb types
+attribute_role lweb_roles;
+roleattribute system_r lweb_roles;
+type lweb_t;
+type lweb_exec_t;
+type lweb_port_t;
+
+init_daemon_domain(lweb_t, lweb_exec_t);
+files_search_pids(lweb_t);
+corenet_port(lweb_port_t);
+role lweb_roles types lweb_t;
+
+# ltorrent types
+attribute_role ltorrent_roles;
+roleattribute system_r ltorrent_roles;
+type ltorrent_t;
+type ltorrent_exec_t;
+type ltorrent_port_t;
+
+init_daemon_domain(ltorrent_t, ltorrent_exec_t);
+files_search_pids(ltorrent_t);
+corenet_port(ltorrent_port_t);
+role ltorrent_roles types ltorrent_t;
+
+
+# lfs_pxelinux types
+attribute_role lfs_pxelinux_roles;
+roleattribute system_r lfs_pxelinux_roles;
+type lfs_pxelinux_t;
+type lfs_pxelinux_exec_t;
+type lfs_pxelinux_port_t;
+
+init_daemon_domain(lfs_pxelinux_t, lfs_pxelinux_exec_t);
+files_search_pids(lfs_pxelinux_t);
+role lfs_pxelinux_roles types lfs_pxelinux_t;
+
+########################################
+#
+# Local policy
+#
+
+#
+# lweb policies
+#
+manage_dirs_pattern(lweb_t, luna_log_t, luna_log_t);
+manage_files_pattern(lweb_t, luna_log_t, luna_log_t);
+logging_log_filetrans(lweb_t, luna_log_t, { file dir });
+files_pid_filetrans(lweb_t, luna_var_run_t, file);
+
+allow lweb_t bin_t:file { execute execute_no_trans };
+allow lweb_t shell_exec_t:file { execute execute_no_trans };
+allow lweb_t ldconfig_exec_t:file { execute execute_no_trans open read };
+allow lweb_t mongod_port_t:tcp_socket name_connect;
+allow lweb_t net_conf_t:file { getattr open read };
+allow lweb_t node_t:tcp_socket node_bind;
+allow lweb_t passwd_file_t:file { getattr open read };
+allow lweb_t tmp_t:dir { read write add_name remove_name };
+allow lweb_t tmp_t:file { read write open create unlink };
+allow lweb_t proc_t:file { getattr open read };
+allow lweb_t init_t:process signal;
+allow lweb_t init_var_run_t:file { getattr open read unlink };
+allow lweb_t var_run_t:file { getattr open read unlink };
+allow lweb_t self:capability { dac_override kill setgid setuid };
+allow lweb_t self:netlink_route_socket { bind create getattr nlmsg_read read write };
+allow lweb_t self:tcp_socket { accept bind connect create getopt listen setopt read write };
+allow lweb_t self:udp_socket { connect create getattr };
+allow lweb_t luna_conf_t:file { getattr open read };
+allow lweb_t luna_var_run_t:file { manage_file_perms create getattr open read write };
+allow lweb_t lweb_port_t:tcp_socket { recv_msg send_msg name_bind };
+
+#
+# httpd policies
+#
+allow httpd_t luna_boot_files_t:file { getattr open read };
+allow httpd_t luna_torrent_files_t:file { getattr open read };
+allow httpd_t lweb_port_t:tcp_socket name_connect;
+allow httpd_t luna_frontend_port_t:tcp_socket  { recv_msg send_msg name_bind };
+
+
+#
+# ltorrent policies
+#
+manage_dirs_pattern(ltorrent_t, luna_log_t, luna_log_t);
+manage_files_pattern(ltorrent_t, luna_log_t, luna_log_t);
+logging_log_filetrans(ltorrent_t, luna_log_t, { file dir });
+files_pid_filetrans(ltorrent_t, luna_var_run_t, file);
+
+allow ltorrent_t bin_t:file { execute execute_no_trans };
+allow ltorrent_t ldconfig_exec_t:file { execute execute_no_trans open read };
+allow ltorrent_t luna_conf_t:file { getattr open read };
+allow ltorrent_t luna_log_t:file open;
+allow ltorrent_t fs_t:filesystem getattr;
+allow ltorrent_t luna_torrent_files_t:dir { getattr open read search remove_name write };
+allow ltorrent_t luna_torrent_files_t:file { getattr open read ioctl };
+allow ltorrent_t mongod_port_t:tcp_socket name_connect;
+allow ltorrent_t net_conf_t:file { getattr open read };
+allow ltorrent_t node_t:tcp_socket node_bind;
+allow ltorrent_t node_t:udp_socket node_bind;
+allow ltorrent_t passwd_file_t:file { getattr open read };
+allow ltorrent_t proc_net_t:file read;
+allow ltorrent_t proc_t:file { getattr open read };
+allow ltorrent_t self:capability { dac_override kill setgid setuid chown };
+allow ltorrent_t self:netlink_route_socket { bind create getattr nlmsg_read read write };
+allow ltorrent_t self:tcp_socket { accept bind connect create getattr getopt listen read setopt write };
+allow ltorrent_t self:udp_socket { bind connect create getattr ioctl read setopt write };
+allow ltorrent_t self:unix_dgram_socket { create ioctl };
+allow ltorrent_t shell_exec_t:file { execute execute_no_trans };
+allow ltorrent_t luna_frontend_port_t:tcp_socket name_connect;
+allow ltorrent_t tmp_t:dir read;
+allow ltorrent_t init_t:process signal;
+allow ltorrent_t ltorrent_port_t:tcp_socket { name_connect recv_msg send_msg name_bind };
+allow ltorrent_t ltorrent_port_t:udp_socket { recv_msg send_msg name_bind };
+allow ltorrent_t self:capability chown;
+allow ltorrent_t luna_var_run_t:file { manage_file_perms create getattr open read write };
+allow ltorrent_t init_var_run_t:file { getattr open read unlink };
+allow ltorrent_t var_run_t:file { getattr open read unlink };
+
+
+#
+# lfs_pxelinux
+#
+manage_dirs_pattern(lfs_pxelinux_t, luna_log_t, luna_log_t);
+manage_files_pattern(lfs_pxelinux_t, luna_log_t, luna_log_t);
+logging_log_filetrans(lfs_pxelinux_t, luna_log_t, { file dir });
+files_pid_filetrans(lfs_pxelinux_t, luna_var_run_t, file);
+
+allow lfs_pxelinux_t bin_t:file { execute execute_no_trans };
+allow lfs_pxelinux_t debugfs_t:dir search;
+allow lfs_pxelinux_t fuse_device_t:chr_file { open read write };
+allow lfs_pxelinux_t fusefs_t:filesystem { mount unmount };
+allow lfs_pxelinux_t kernel_t:system module_request;
+allow lfs_pxelinux_t ldconfig_exec_t:file { execute execute_no_trans open read };
+allow lfs_pxelinux_t luna_conf_t:file { getattr open read };
+allow lfs_pxelinux_t lweb_port_t:tcp_socket name_connect;
+allow lfs_pxelinux_t mongod_port_t:tcp_socket name_connect;
+allow lfs_pxelinux_t net_conf_t:file { getattr open read };
+allow lfs_pxelinux_t passwd_file_t:file { getattr open read };
+allow lfs_pxelinux_t proc_t:file { getattr open read };
+allow lfs_pxelinux_t self:capability dac_override;
+allow lfs_pxelinux_t self:netlink_route_socket { bind create getattr nlmsg_read read write };
+allow lfs_pxelinux_t self:tcp_socket { connect create getopt read setopt write };
+allow lfs_pxelinux_t self:udp_socket { connect create getattr };
+allow lfs_pxelinux_t shell_exec_t:file { execute execute_no_trans };
+allow lfs_pxelinux_t tftpdir_t:dir { getattr mounton };
+allow lfs_pxelinux_t tftpdir_t:file { getattr open read };
+allow lfs_pxelinux_t tmp_t:dir read;
+allow lfs_pxelinux_t var_run_t:dir { add_name remove_name write };
+allow lfs_pxelinux_t var_run_t:file { create getattr open read unlink write };
+allow lfs_pxelinux_t luna_var_run_t:file { create getattr open read unlink write };
+
+allow tftpd_t fusefs_t:dir search;
+allow tftpd_t fusefs_t:file { getattr lock open read };
+

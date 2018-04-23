@@ -1,6 +1,7 @@
 # Encoding: UTF-8
 
 from setuptools import setup, find_packages
+from os import listdir
 
 setup(
     name='luna',
@@ -17,6 +18,10 @@ setup(
     dependency_links=[],
 
     package_data={
-        
+
     },
+    data_files=[
+        ('usr/share/luna/templates', [ 'templates/' + e for e in listdir('templates') ] )
+    ],
+    include_package_data=True
 )

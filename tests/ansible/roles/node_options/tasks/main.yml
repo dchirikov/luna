@@ -1,0 +1,114 @@
+###############################################################################
+
+- name: Cleanup
+  luna_cluster:
+    state: "absent"
+  ignore_errors: true
+
+- name: Create cluster
+  luna_cluster:
+    frontend_address: "{{ luna_frontend_address }}"
+    named_include_file: "{{ luna_named_include_file }}"
+    named_zone_dir: "{{ luna_named_zone_dir }}"
+    path: "{{ luna_home }}"
+    state: "present"
+
+- name: Create bmcsetup
+  luna_bmcsetup:
+    name: "basic"
+
+- name: Create symlink
+  file:
+    src: "{{ luna_osimage_path }}"
+    dest: "/tmp/osimage"
+    state: link
+
+- name: Add osimage
+  luna_osimage:
+    name: "compute-test-osimage"
+    path: "/tmp/osimage"
+
+- name: Create network
+  luna_network:
+    name: "test01"
+    network: "192.168.1.0"
+    prefix: 24
+
+- name: Create bmc network
+  luna_network:
+    name: "test02"
+    network: "192.168.2.0"
+    prefix: 24
+
+- name: Create group
+  luna_group:
+    name: "compute-test-group"
+    osimage: "compute-test-osimage"
+    bmcsetup: "basic"
+    comment: "Created by ansible"
+    interfaces:
+    - name: "BOOTIF"
+      networks:
+      - "test01"
+    - name: "BMC"
+      networks:
+      - "test02"
+
+- name: Create switch
+  luna_switch:
+    name: "switch01"
+    network: "test02"
+    ip: "192.168.2.101"
+
+###############################################################################
+
+- name: Add node
+  luna_node:
+    name: "node001"
+    group: "compute-test-group"
+    localboot: true
+    setupbmc: false
+    mac: "00:01:02:03:04:05"
+    switch: "switch01"
+    port: "Ge0/1"
+    service: true
+    comment: "Created by ansible"
+    interfaces:
+    - name: "BOOTIF"
+      ip:
+      - 192.168.1.11
+    - name: "BMC"
+      ip:
+      - 192.168.2.11
+  register: res
+
+- assert: {that: "res.changed == true"}
+
+###############################################################################
+
+- name: Set expected var
+  set_fact:
+    expected:
+    - "+---------------+-------------------------+"
+    - "| Parameter     | Value                   |"
+    - "+---------------+-------------------------+"
+    - "| name          | node001                 |"
+    - "| group         | [compute-test-group]    |"
+    - "| interfaces    | BMC:   192.168.2.11     |"
+    - "|               | BOOTIF:192.168.1.11     |"
+    - "| localboot     | yes                     |"
+    - "| mac           | 00:01:02:03:04:05       |"
+    - "| port          | Ge0/1                   |"
+    - "| service       | yes                     |"
+    - "| setupbmc      | no                      |"
+    - "| switch        | [switch01]              |"
+    - "| comment       | Created by ansible      |"
+    - "+---------------+-------------------------+"
+
+- name: Check luna node show output
+  command: "luna node show node001"
+  register: res
+
+- assert: { that: "expected == res.stdout_lines"}
+
+###############################################################################

@@ -1,0 +1,7 @@
+---
+- hosts: localhost
+  roles:
+  - role: otherdev_create
+    tags: create
+  - role: otherdev_options
+    tags: options

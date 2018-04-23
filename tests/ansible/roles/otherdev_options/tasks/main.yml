@@ -1,0 +1,115 @@
+###############################################################################
+
+- name: Cleanup
+  luna_cluster:
+    state: "absent"
+  ignore_errors: true
+
+- name: Create cluster
+  luna_cluster:
+    frontend_address: "{{ luna_frontend_address }}"
+    path: "{{ luna_home }}"
+    state: "present"
+
+- name: Create networks
+  luna_network:
+    name: "net0{{ item }}"
+    network: "192.168.{{ item }}.0"
+    prefix: 24
+  with_items: [1, 2, 3]
+
+###############################################################################
+
+- name: Create otherdev
+  luna_otherdev:
+    name: "{{ luna_otherdev_name }}"
+    comment: "Created by ansible"
+    connected:
+    - network: "net01"
+      ip: "192.168.1.1"
+    - network: "net03"
+      ip: "192.168.3.1"
+
+###############################################################################
+
+- name: Set expected var
+  set_fact:
+    expected:
+    - "+--------------+------------------------+"
+    - "| Parameter    | Value                  |"
+    - "+--------------+------------------------+"
+    - "| name         | pdu01                  |"
+    - "| connected    | [net01]:192.168.1.1    |"
+    - "|              | [net03]:192.168.3.1    |"
+    - "| comment      | Created by ansible     |"
+    - "+--------------+------------------------+"
+
+- name: Check luna otherdev show output
+  command: "luna otherdev show pdu01"
+  register: res
+
+- assert: { that: "expected == res.stdout_lines"}
+
+###############################################################################
+
+- name: Change network
+  luna_otherdev:
+    name: "{{ luna_otherdev_name }}"
+    comment: "Created by ansible"
+    connected:
+    - network: "net02"
+      ip: "192.168.2.1"
+    - network: "net01"
+      ip: "192.168.1.1"
+
+###############################################################################
+
+- name: Set expected var
+  set_fact:
+    expected:
+    - "+--------------+------------------------+"
+    - "| Parameter    | Value                  |"
+    - "+--------------+------------------------+"
+    - "| name         | pdu01                  |"
+    - "| connected    | [net01]:192.168.1.1    |"
+    - "|              | [net02]:192.168.2.1    |"
+    - "| comment      | Created by ansible     |"
+    - "+--------------+------------------------+"
+
+- name: Check luna otherdev show output
+  command: "luna otherdev show pdu01"
+  register: res
+
+- assert: { that: "expected == res.stdout_lines"}
+
+###############################################################################
+
+- name: Remove network
+  luna_otherdev:
+    name: "{{ luna_otherdev_name }}"
+    comment: "Created by ansible"
+    connected:
+    - network: "net02"
+      ip: "192.168.2.1"
+
+###############################################################################
+
+- name: Set expected var
+  set_fact:
+    expected:
+    - "+--------------+------------------------+"
+    - "| Parameter    | Value                  |"
+    - "+--------------+------------------------+"
+    - "| name         | pdu01                  |"
+    - "| connected    | [net02]:192.168.2.1    |"
+    - "| comment      | Created by ansible     |"
+    - "+--------------+------------------------+"
+
+- name: Check luna otherdev show output
+  command: "luna otherdev show pdu01"
+  register: res
+
+- assert: { that: "expected == res.stdout_lines"}
+
+###############################################################################
+

@@ -1,0 +1,51 @@
+###############################################################################
+
+- name: Cleanup
+  luna_cluster:
+    state: "absent"
+  ignore_errors: true
+
+- name: Create cluster
+  luna_cluster:
+    frontend_address: "{{ luna_frontend_address }}"
+    path: "{{ luna_home }}"
+    state: "present"
+
+- name: Create network
+  luna_network:
+    name: "{{ luna_bmc_net_name }}"
+    network: "{{ luna_bmc_net }}"
+    prefix: "{{ luna_bmc_net_prefix }}"
+
+###############################################################################
+
+- name: Create switch
+  luna_switch:
+    name: "{{ luna_switch_name }}"
+    network: "{{ luna_switch_net }}"
+    ip: "{{ luna_switch_ip }}"
+
+###############################################################################
+
+- name: Delete switch
+  luna_switch:
+    name: "{{ luna_switch_name }}"
+    state: "absent"
+  register: res
+
+- assert: {that: "res.changed == true"}
+
+###############################################################################
+
+- name: Check if switch is deleted
+  command: "luna switch show {{ luna_switch_name }}"
+  ignore_errors: true
+  register: res
+
+- assert:
+    that:
+    - res.changed == true
+    - res.failed == true
+    - res.stderr == "ERROR:luna.switch:Object '{{ luna_switch_name }}' of type 'switch' does not exist"
+
+###############################################################################

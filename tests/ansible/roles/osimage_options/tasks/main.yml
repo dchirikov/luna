@@ -1,0 +1,72 @@
+###############################################################################
+
+- name: Cleanup
+  luna_cluster:
+    state: "absent"
+  ignore_errors: true
+
+- name: Create cluster
+  luna_cluster:
+    frontend_address: "{{ luna_frontend_address }}"
+    named_include_file: "{{ luna_named_include_file }}"
+    named_zone_dir: "{{ luna_named_zone_dir }}"
+    path: "{{ luna_home }}"
+    state: "present"
+
+- name: Add osimage
+  luna_osimage:
+    name: "{{ luna_osimage_name }}"
+    path: "{{ luna_osimage_path }}"
+
+###############################################################################
+
+- name: Create symlink
+  file:
+    src: "{{ luna_osimage_path }}"
+    dest: "/tmp/osimage"
+    state: link
+
+- name: Change options for the image
+  luna_osimage:
+    name: "testosimage"
+    path: "/tmp/osimage"
+
+- name: Change options for the image
+  luna_osimage:
+    name: "testosimage"
+    path: "/tmp/osimage"
+    kernver: "1.0"
+    kernopts: "customoptions"
+    comment: "Created by ansible"
+    dracutmodules: "luna"
+    kernmodules: "ipmi_devintf,ipmi_si,ipmi_msghandler,test"
+    grab_exclude_list: "aaa\nbbb"
+    grab_filesystems: "/,/boot,/home"
+
+- name: Set expected var
+  set_fact:
+    expected:
+    - "+----------------------+----------------------------------------------+"
+    - "| Parameter            | Value                                        |"
+    - "+----------------------+----------------------------------------------+"
+    - "| name                 | testosimage                                  |"
+    - "| dracutmodules        | luna                                         |"
+    - "| grab_exclude_list    | aaa                                          |"
+    - "|                      | bbb                                          |"
+    - "| grab_filesystems     | /,/boot,/home                                |"
+    - "| initrdfile           |                                              |"
+    - "| kernfile             |                                              |"
+    - "| kernmodules          | ipmi_devintf,ipmi_si,ipmi_msghandler,test    |"
+    - "| kernopts             | customoptions                                |"
+    - "| kernver              | 1.0                                          |"
+    - "| path                 | /tmp/osimage                                 |"
+    - "| comment              | Created by ansible                           |"
+    - "+----------------------+----------------------------------------------+"
+
+- name: Check luna osimage show output
+  command: "luna osimage show testosimage"
+  register: res
+
+- assert: { that: "expected == res.stdout_lines"}
+
+###############################################################################
