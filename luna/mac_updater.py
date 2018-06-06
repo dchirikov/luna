@@ -22,10 +22,8 @@ along with Luna.  If not, see <http://www.gnu.org/licenses/>.
 
 from config import *
 
-import logging
 import sys
 import time
-import threading
 import netsnmp
 import datetime
 
@@ -50,11 +48,8 @@ class MacUpdater(object):
         self.active = True
         self.finished = False
 
-        thread = threading.Thread(target=self.run, args=())
-        thread.daemon = True
-        thread.start()
-
     def run(self):
+        self.log.info("MacUpdater started")
         counter = self.interval
         cluster = Cluster(mongo_db=self._mongo_db)
 
