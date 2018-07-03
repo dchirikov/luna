@@ -60,7 +60,7 @@ Requires: python-requests
 Requires(pre):   %{_sbindir}/useradd,%{_sbindir}/userdel
 Requires(pre):   %{_bindir}/systemctl
 
-Requires(post):  %{_bindir}/sed
+Requires(post):  sed
 Requires(post):  %{_bindir}/systemctl
 Requires(post):  %{_sbindir}/groupadd,%{_sbindir}/groupdel
 Requires(post):  %{_bindir}/chmod,%{_bindir}/chown
