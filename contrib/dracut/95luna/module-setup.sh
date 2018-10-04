@@ -13,7 +13,9 @@ depends() {
 install() {
     dracut_install ssh sshd scp tar wget curl awk sed gzip basename dd partx \
                    parted mkfs.ext2 mkfs.ext3 mkfs.ext4 mkfs.xfs ipmitool \
-                   blkdiscard fstrim nslookup dig
+                   blkdiscard fstrim nslookup dig \
+                   lsblk lspci blkid find dmidecode
+
     inst_libdir_file libnssdbm3.so libnsspem.so libsoftokn3.chk \
                      libsoftokn3.so libsqlite3.so
 

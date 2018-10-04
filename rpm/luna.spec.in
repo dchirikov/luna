@@ -103,6 +103,10 @@ Requires: dracut-config-generic
 Requires: dracut-network
 Requires: nss
 Requires: nss-softokn
+Requires: util-linux
+Requires: pciutils
+Requires: findutils
+Requires: dmidecode
 
 %description client
 Dracut module for Luna deployment tool
