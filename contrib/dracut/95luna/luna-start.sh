@@ -49,6 +49,14 @@ function are_macs_equal () {
     }'
 }
 
+function run_dhcpclient() {
+    . /lib/dracut-lib.sh
+    . /lib/net-lib.sh
+    /usr/sbin/dhclient -lf /luna/dhclient.leases
+    . $hookdir/initqueue/setup_net_*.sh
+    rm -f /tmp/net.*.did-setup
+}
+
 function find_nic () {
     REQMAC=$1
     for NIC in /sys/class/net/*; do
@@ -84,7 +92,7 @@ function luna_start () {
     luna_bootproto=$(getargs luna.bootproto=)
     if [ "x$luna_bootproto" = "xdhcp" ]; then
         echo "Luna: Configuring dhcp for all interfaces"
-        /usr/sbin/dhclient -lf /luna/dhclient.leases
+        run_dhcpclient
     else
         luna_ip=$(getargs luna.ip=)
         luna_mac=$(getargs luna.mac=)
@@ -93,7 +101,7 @@ function luna_start () {
         luna_nic=$(find_nic ${luna_mac})
         if [ "x${luna_nic}" = "x" ]; then
             echo "Luna: unable to find NIC for mac ${luna_mac}. Starting dhcp"
-            /usr/sbin/dhclient -lf /luna/dhclient.leases
+            run_dhcpclient
         else
             echo "${luna_nic}" > /luna/luna_nic
             export LUNA_BOOTIF="${luna_nic}"
