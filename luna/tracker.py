@@ -109,41 +109,29 @@ class AnnounceHandler(BaseHandler):
 
     @tornado.web.asynchronous
     @tornado.gen.engine
-    def get_peers(self, info_hash, numwant, compact, no_peer_id, age):
+    def get_peers(
+            self, info_hash, numwant, compact, no_peer_id, ip, port, age):
+
         time_age = datetime.datetime.utcnow() - datetime.timedelta(seconds=age)
         peer_tuple_list = []
         n_leechers = 0
         n_seeders = 0
 
-        nodes = self.mongo_db['tracker'].find({'info_hash': info_hash,
-                                               'updated': {'$gte': time_age}},
-                                              {'peer_id': 1, 'ip': 1,
-                                               'port': 1, 'status': 1})
-        for doc in nodes:
-            peer_tuple_list.append((binascii.unhexlify(doc['peer_id']),
-                                    doc['ip'], doc['port']))
-
-            try:
-                n_leechers += int(doc['status'] == 'started')
-                n_seeders += int(doc['status'] == 'completed')
-            except:
-                pass
-
-        peer_id = binascii.hexlify('lunalunalunalunaluna')
         servers = self.mongo_db['tracker'].find({'info_hash': info_hash,
-                                                 'peer_id': peer_id,
                                                  'port': {'$ne': 0}},
                                                 {'peer_id': 1, 'ip': 1,
                                                  'port': 1, 'status': 1})
         for doc in servers:
+            if 'status' not in doc:
+                continue
+            if doc['ip'] == ip and doc['port'] == port:
+                continue
+
             peer_tuple_list.append((binascii.unhexlify(doc['peer_id']),
                                     doc['ip'], doc['port']))
 
-            try:
-                n_leechers += int(doc['status'] == 'started')
-                n_seeders += int(doc['status'] == 'completed')
-            except:
-                pass
+            n_leechers += int(doc['status'] == 'started')
+            n_seeders += int(doc['status'] == 'completed')
 
         # It's believed it will get better 'cohesion'
         if numwant > len(peer_tuple_list):
@@ -258,6 +246,7 @@ class AnnounceHandler(BaseHandler):
             self.response['warning message'] = warning_message
 
         self.get_peers(info_hash, numwant, compact, no_peer_id,
+                       ip, port,
                        self.tracker_interval * 2)
 
         self.set_header('Content-Type', 'text/plain')
