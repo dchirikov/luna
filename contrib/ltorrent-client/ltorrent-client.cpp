@@ -18,161 +18,172 @@
 * You should have received a copy of the GNU General Public License
 * along with Luna.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <stdlib.h>
-#include <unistd.h>
-#include <csignal>
-#include <iostream>
-#include <fstream>
-#include "boost/asio/error.hpp"
-#include "libtorrent/entry.hpp"
-#include "libtorrent/bencode.hpp"
-#include "libtorrent/session.hpp"
-#include "libtorrent/session.hpp"
 
 
+#include "ltorrent-client.h"
 
-libtorrent::session s;
-int run = 1;
+namespace lt = libtorrent;
 
-bool yes(libtorrent::torrent_status const&)
+char const* state(lt::torrent_status::state_t s)
 {
-    return true;
+	switch(s) {
+		case lt::torrent_status::checking_files: return "checking";
+		case lt::torrent_status::downloading_metadata: return "dl metadata";
+		case lt::torrent_status::downloading: return "downloading";
+		case lt::torrent_status::finished: return "finished";
+		case lt::torrent_status::seeding: return "seeding";
+		case lt::torrent_status::allocating: return "allocating";
+		case lt::torrent_status::checking_resume_data: return "checking resume";
+		default: return "<>";
+	}
 }
 
-void exit_signalHandler( int signum ) {
-    run = 0;
-}
-void printhelp(char *s) {
-    fprintf(stdout, "Usage: %s [-option] [argument]\n" ,s);
-    fprintf(stdout, "       -h                  Print help.\n");
-    fprintf(stdout, "       -t FILE             Torrent file.\n");
-    fprintf(stdout, "       -p PID              SIGUSR1 will be sent to this process on complete.\n");
-    fprintf(stdout, "       -f PIDFILE          File to write own pid to. (%s.pid by default)\n", s);
-    fprintf(stdout, "       -b XXX.XXX.XXX.XXX  IP to bind. (0.0.0.0 by default)\n");
-    fprintf(stdout, "       -d NUM              Sent announce to tracker every NUM sec. (10 sec by default)\n");
-    exit(1);
+std::vector<std::string> split(const std::string& s, char delimiter)
+{
+   std::vector<std::string> tokens;
+   std::string token;
+   std::istringstream tokenStream(s);
+   while (std::getline(tokenStream, token, delimiter))
+   {
+      tokens.push_back(token);
+   }
+   return tokens;
 }
 
-int main(int argc, char* argv[])
-{       
-        if (argc == 1) {
-            printhelp(argv[0]);
+LtorrentClient::LtorrentClient(OptionParser opts)
+    : _opts(opts) {}
+
+bool LtorrentClient::running = true;
+lt::session LtorrentClient::_sess;
+
+int LtorrentClient::CreatePidfile() {
+  auto pid = getpid();
+  std::ofstream pidfile;
+  pidfile.open(_opts.pidfile);
+  pidfile << pid;
+  pidfile << "\n";
+  pidfile.close();
+  return EXIT_SUCCESS;
+}
+
+int LtorrentClient::RemovePidfile() {
+  if (remove(_opts.pidfile.c_str()) != 0) {
+    std::cerr << "Error deleting pidfile\n";
+    return EXIT_FAILURE;
+  }
+  return EXIT_SUCCESS;
+}
+
+void LtorrentClient::StopHandler(int signal) {
+  std::cout << "Stopping\n";
+  running = false;
+}
+
+int LtorrentClient::RegisterHandlers() {
+  std::signal(SIGINT, StopHandler);
+  std::signal(SIGTERM, StopHandler);
+  return EXIT_SUCCESS;
+}
+
+int LtorrentClient::SetPeerID() {
+  char hostname[21];
+  char hostname_tmp[HOST_NAME_MAX];
+  gethostname(hostname_tmp, HOST_NAME_MAX);
+  auto vhostname = split(std::string(hostname_tmp), '.');
+  if (vhostname[0].length() > 20) {
+    // we can't use hostname for peer_id  if hostname length is > 20 chars
+    return EXIT_SUCCESS;
+  }
+  snprintf(hostname, sizeof(hostname), "%20s", vhostname[0].c_str());
+  lt::peer_id my_peer_id = lt::sha1_hash(hostname);
+  _sess.set_peer_id(my_peer_id);
+  return EXIT_SUCCESS;
+}
+
+int LtorrentClient::BindPorts() {
+  lt::error_code ec;
+  auto settings = lt::session_settings();
+  // disable unneeded features
+  settings.ssl_listen = false;
+  _sess.set_settings(settings);
+  _sess.stop_natpmp();
+  _sess.stop_upnp();
+  _sess.stop_lsd();
+
+  _sess.listen_on(std::make_pair(6881, 6889), ec, _opts.bindip.c_str());
+  if (ec) {
+    std::cerr << "failed to open listen socket: "
+              << ec.message() << "\n";
+    return EXIT_FAILURE;
+  }
+  return EXIT_SUCCESS;
+}
+
+int LtorrentClient::DownloadTorrent() {
+
+  _sess.set_alert_mask(
+      lt::alert::error_notification
+		| lt::alert::storage_notification
+		| lt::alert::status_notification
+  );
+
+  // create torrent object
+  lt::add_torrent_params p;
+  lt::error_code ec;
+
+  p.save_path = "./";
+  p.ti = new lt::torrent_info(_opts.torrentfile, ec);
+  if (ec)
+  {
+    std::cerr << ec.message() << "\n";
+    return EXIT_FAILURE;
+  }
+  _sess.async_add_torrent(std::move(p));
+
+  lt::torrent_handle h;
+
+  while(running) {
+    std::deque<lt::alert*> alerts;
+    _sess.pop_alerts(&alerts);
+
+    for (auto const* a : alerts) {
+			if (auto at = lt::alert_cast<lt::add_torrent_alert>(a)) {
+				h = at->handle;
+			}
+
+			// if we receive the finished alert or an error, we're done
+			if (lt::alert_cast<lt::torrent_finished_alert>(a)) {
+				h.save_resume_data();
+        std::cout << "Finished\n";
+        if (_opts.userpid > 0) {
+          std::cout << "Sending SIGUSR1 to PID " << _opts.userpid << "\n";
+          kill(_opts.userpid, SIGUSR1);
         }
-        int tmp;
-        char torrentfile[255];
-        int usrpid = 0;
-        int mypid;
-        char pidfilename[255];
-        char ip[16];
-        int delay = 10;
-        strcpy(ip, "0.0.0.0");
-        strcpy(pidfilename, argv[0]);
-        strcat(pidfilename, ".pid");
+			}
+			if (lt::alert_cast<lt::torrent_error_alert>(a)) {
+				std::cout << a->message() << "\n";
+				running = false;
+			}
 
-        while((tmp=getopt(argc,argv,"ht:p:f:b:d:"))!=-1) {
-             switch(tmp) {
-                case 'h':
-                    printhelp(argv[0]);
-                    break;
-                case 't':
-                    strcpy(torrentfile, optarg);
-                    break;
-                case 'p':
-                    usrpid = atoi(optarg);
-                    break;
-                case 'f':
-                    strcpy(pidfilename, optarg);
-                    break;
-                case 'b':
-                    strcpy(ip, optarg);
-                    break;
-                case 'd':
-                    delay = atoi(optarg);
-                    break;
-                default:
-                    printhelp(argv[0]);
-                    break;
-             }
-        }
-        if (usrpid == 0) {
-            printhelp(argv[0]);
-        }
-        mypid = ::getpid();
-        std::signal(SIGINT, exit_signalHandler);
-        std::signal(SIGTERM, exit_signalHandler);
+			if (auto st = lt::alert_cast<lt::state_update_alert>(a)) {
+				if (st->status.empty()) continue;
 
-        using namespace libtorrent;
+				// we only have a single torrent, so we know which one
+				// the status is for
+				lt::torrent_status const& s = st->status[0];
+				std::cout  << state(s.state) << " "
+					<< (s.download_payload_rate / 1000) << " kB/s "
+					<< (s.total_done / 1000) << " kB ("
+					<< (s.progress_ppm / 10000) << "%) downloaded\n";
+				std::cout.flush();
+			}
+    }
 
-        // set peer_id to nodename
-        char hostname[HOST_NAME_MAX];
-        gethostname(hostname, HOST_NAME_MAX);
-        char buff[21];
-        snprintf(buff, sizeof(buff), "%20s", hostname);
-        peer_id my_peer_id = sha1_hash(buff);
-        s.set_peer_id(my_peer_id);
-        error_code ec;
+    _sess.post_torrent_updates();
+    h.save_resume_data();
+    h.force_reannounce();
+    std::this_thread::sleep_for(std::chrono::milliseconds(_opts.delay*1000));
 
-        // set up torrent session
-        s.listen_on(std::make_pair(6881, 6889), ec, ip);
-        if (ec)
-        {
-                fprintf(stderr, "failed to open listen socket: %s\n", ec.message().c_str());
-                return 1;
-        }
-
-        // create torrent object
-        add_torrent_params p;
-        p.save_path = "./";
-        p.ti = new torrent_info(torrentfile, ec);
-        if (ec)
-        {
-                fprintf(stderr, "%s\n", ec.message().c_str());
-                return 1;
-        }
-
-        // start downloading torrent
-        torrent_handle torrent = s.add_torrent(p, ec);
-        if (ec)
-        {
-                fprintf(stderr, "%s\n", ec.message().c_str());
-                return 1;
-        }
-
-        // create pidfile
-        std::ofstream pidfile;
-        pidfile.open(pidfilename);
-        pidfile << mypid;
-        pidfile << "\n";
-        pidfile.close();
-
-        std::vector<torrent_status> vts;
-        s.get_torrent_status(&vts, &yes, 0);
-        torrent_status& st = vts[0];
-        boost::int64_t remains = st.total_wanted - st.total_wanted_done;
-        fprintf(stdout, "Remains: %i\n", remains);
-        //fprintf(stdout, "Torrent: %i\n", torrent);
-
-        while( remains > 0 && run ) {
-            usleep(delay*1000000);
-            std::vector<torrent_status> vts;
-            s.get_torrent_status(&vts, &yes, 0);
-            torrent_status& st = vts[0];
-            remains = st.total_wanted - st.total_wanted_done;
-            fprintf(stdout, "Remains: %i\n", remains);
-            torrent.force_reannounce();
-
-        }
-        // send SIGUSR1 to process
-        fprintf(stdout, "Done with torrent. Sending SIGUSR1 to PID %i\n", usrpid); 
-        kill(usrpid, SIGUSR1);
-        while (run) {
-            usleep(delay*1000000);
-            torrent.force_reannounce();
-        }
-        s.abort();
-        remove(pidfilename);
-        fprintf(stdout, "Exit.\n"); 
-        return 0;
-        
+  }
 }
 
