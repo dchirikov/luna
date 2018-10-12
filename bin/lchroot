@@ -36,7 +36,7 @@ if [ -f $CHROOT_PATH/tmp/lchroot.lock ]; then
     exit 8
 fi
 
-CUR_TTY=$(tty)
+CUR_TTY=$(tty || echo non-interactive)
 CUR_PID=$$
 echo "PID ${CUR_PID} on ${CUR_TTY}" > $CHROOT_PATH/tmp/lchroot.lock
 
