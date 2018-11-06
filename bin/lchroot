@@ -43,7 +43,6 @@ fi
 FAKE_KERN=$(luna osimage show $OSIMAGE --kernver | awk '$2~/<=/{print $1}')
 CHROOT_PATH=$(luna osimage show $OSIMAGE --path)
 
-
 echo "IMAGE PATH: $CHROOT_PATH"
 if [ -f $CHROOT_PATH/tmp/lchroot.lock ]; then
     TMP=$(cat $CHROOT_PATH/tmp/lchroot.lock)
