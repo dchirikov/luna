@@ -18,15 +18,30 @@ function mount_d {
     mount -t proc     proc      $CHROOT_PATH/proc 2>/dev/null || NEED_UMOUNT_PROC=0
 }
 
-OSIMAGE=$1
-if [ "x${OSIMAGE}" = "x" ]; then
-    echo "osimage need to be specified."
+function show_help {
+    echo "usage: luna [-h|--help|--usage] osimage"
+}
+
+PARM=$1
+if [ \
+        "x${PARM}" = "x" \
+        -o "x${PARM}" = "x-h" \
+        -o "x${PARM}" = "x--help" \
+        -o "x${PARM}" = "x--usage" \
+    ]; then
+    show_help
+    exit 7
+fi
+
+OSIMAGE=$PARM
+if ! python -c "import luna; print '\n'.join(luna.list('osimage'))" | grep -q ${OSIMAGE}; then
+    echo "No such image '${OSIMAGE}'"
     echo "Type 'luna osimage list' to get the list."
     exit 7
 fi
+
 FAKE_KERN=$(luna osimage show $OSIMAGE --kernver | awk '$2~/<=/{print $1}')
 CHROOT_PATH=$(luna osimage show $OSIMAGE --path)
-
 
 echo "IMAGE PATH: $CHROOT_PATH"
 if [ -f $CHROOT_PATH/tmp/lchroot.lock ]; then
