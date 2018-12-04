@@ -1,0 +1,91 @@
+# Data Structures
+
+## TasksBasicInfo
++ id: 5b06cfb7c6cbe83114b8adb1 (required, string) - ID of the task
++ time: 2018-11-30 15:10:49.542714515+01:00 (required, string) - Time of the last status update (RFC 3339 format)
++ initiator: torrents (required, string) - Name of the subsystem started the task
+
+## TasksFullInfo
++ id: 5b06cfb7c6cbe83114b8adb1 (required, string) - ID of the task
++ time: 2018-11-30 15:10:49.542714515+01:00 (required, string) - Time of the last status update (RFC 3339 format)
++ initiator: torrent_files (required, string) - Name of the subsystem started the task
++ status: pending, started, done, error (required, enum) - Status of the task
++ object: /torrent_files/5b06cfb7c6cbe83114b8cba4 (string) - URI of the object task is working on
++ output: IO Error (string) - Diagnostic output
+
+## TaksCreateInfo
++ initiator: torrents (required, string) - Name of the subsystem started the task
++ status: pending, started, done, error (enum) - Status of the task
++ object: /torrent_files/5b06cfb7c6cbe83114b8cba4 (string) - URI of the object task is working on
++ output: IO Error (string) - Diagnostic output
+
+## TasksUpdateInfo
++ id: 5b06cfb7c6cbe83114b8adb1 (required, string) - ID of the task
++ status: pending, started, done, error (enum) - Status of the task
++ object: /torrent_files/5b06cfb7c6cbe83114b8cba4 (string) - URI of the object task is working on
++ output: IO Error (string) - Diagnostic output
+
+## TasksList (array)
++ (TasksBasicInfo)
+
+# Group Tasks
+Asynchronous tasks for creating and maintaining objects in Luna
+
+## Tasks [/tasks]
+Endpoint for tasks
+
+### List tasks [GET]
+Returns list of all tasks
+
++ Response 200 (application/json)
+
+     + Attributes (TasksList)
+
+<!-- include(../errors/400-500.apib) -->
+
+### Create task [POST]
+Task creation
+
++ Request (application/json)
+
+     + Attributes (TaksCreateInfo)
+
++ Response 201 (application/json)
+
+     + Attributes (TasksFullInfo)
+
+<!-- include(../errors/400-500.apib) -->
+
+## Task [/tasks/{id}]
+Get status of the task
+
++ Parameters
+    + id: 5b06cfb7c6cbe83114b8adb1 (required, string) - ID of the task
+
+### Get info [GET]
+Get information about task
+
++ Response 200 (application/json)
+
+     + Attributes (TasksFullInfo)
+
+<!-- include(../errors/400-404-500.apib) -->
+
+### Update task [PUT]
+Update task
+
++ Request (application/json)
+
+     + Attributes (TasksUpdateInfo)
+
++ Response 204
+
+<!-- include(../errors/400-404-500.apib) -->
+
+### Delete [DELETE]
+Delete task
+
++ Response 204
+
+<!-- include(../errors/400-404-500.apib) -->
+

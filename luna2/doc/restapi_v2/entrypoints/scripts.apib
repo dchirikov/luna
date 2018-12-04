@@ -1,0 +1,77 @@
+# Data Structures
+
+## ScriptBasicInfo
++ id: 5b06cfb7c6cbe83114b8adb1 (required, string) - ID of the script
++ time: 2018-11-30 15:10:49.542714515+01:00 (required, string) - Time in RFC 3339 format
+
+## ScriptContent
++ content: #!/bin/bash\n\necho test (required, string) - Script content
+
+## ScriptData
++ id: 5b06cfb7c6cbe83114b8adb1 (required, string) - ID of the script
++ content: #!/bin/bash\n\necho test (required, string) - Script content
++ time: 2018-11-30 15:10:49.542714515+01:00 (required, string) - Time in RFC 3339 format
+
+## ScriptList (array)
++ (ScriptBasicInfo)
+
+# Group Scripts
+Scripts for customizing installation behavior
+
+## Scripts [/scripts]
+Endpoint for scripts
+
+### List scripts [GET]
+Returns list of all scripts
+
++ Response 200 (application/json)
+
+     + Attributes (ScriptList)
+
+<!-- include(../errors/400-500.apib) -->
+
+### Create new script [POST]
+Create new script using content
+
++ Request (application/json)
+
+     + Attributes (ScriptContent)
+
++ Response 201 (application/json)
+
+     + Attributes (ScriptBasicInfo)
+
+<!-- include(../errors/400-500.apib) -->
+
+## Script [/scripts/{id}]
+Get information about script or modify it
+
++ Parameters
+    + id: 5b06cfb7c6cbe83114b8adb1 (required, string) - ID of the script
+
+### Get script [GET]
+Get script content
+
++ Response 200 (application/json)
+
+     + Attributes (ScriptData)
+
+<!-- include(../errors/400-404-500.apib) -->
+
+### Change script [PUT]
+Replace content of the script
+
++ Request (application/json)
+
+     + Attributes (ScriptData)
+
++ Response 204
+
+<!-- include(../errors/400-404-500.apib) -->
+
+### Delete [DELETE]
+Delete script
+
++ Response 204
+
+<!-- include(../errors/400-404-500.apib) -->

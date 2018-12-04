@@ -1,0 +1,64 @@
+# Data Structures
+
+## BootFilesBasicInfo
++ id: 5b06cfb7c6cbe83114b8adb1 (required, string) - ID of the boot file
++ basename: name_of_the_file (required, string) - Name of the file on the filesystem
+
+## BootFilesFullInfo
++ id: 5b06cfb7c6cbe83114b8adb1 (required, string) - ID of the boot file
++ basename: name_of_the_file (required, string) - Name of the file on the filesystem
++ fullpath: some_path (required, string) - Full path to file on the filesystem
++ time: 2018-11-30 15:10:49.542714515+01:00 (required, string) - Time in RFC 3339 format
+
+## BootFilesList (array)
++ (BootFilesBasicInfo)
+
+# Group Boot Files
+Boot files for system boot. Kernels and initrd images
+
+## Boot files [/boot_files]
+Endpoint for boot files
+
+### List boot files [GET]
+Returns list of all boot files
+
++ Response 200 (application/json)
+
+     + Attributes (BootFilesList)
+
+<!-- include(../errors/400-500.apib) -->
+
+### Upload boot file [POST]
+Returns data about uploaded file
+
++ Request (multipart/form-data)
+
++ Response 201 (application/json)
+
+     + Attributes (BootFilesBasicInfo)
+
+<!-- include(../errors/400-500.apib) -->
+
+## Boot file [/boot_files/{id}]
+Operations available for boot files
+
++ Parameters
+    + id: 5b06cfb7c6cbe83114b8adb1 (required, string) - ID of the boot file
+
+
+### Get info [GET]
+Get information about boot file
+
++ Response 200 (application/json)
+
+     + Attributes (BootFilesFullInfo)
+
+<!-- include(../errors/400-404-500.apib) -->
+
+### Delete [DELETE]
+Delete boot file
+
++ Response 204
+
+<!-- include(../errors/400-404-500.apib) -->
+

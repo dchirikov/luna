@@ -1,0 +1,23 @@
+FORMAT: 1A
+HOST: http://localhost:7051
+
+# Luna
+RESTful api to iteract with Luna daemon
+
+Authentication is being performed using token:
+
+```http
+Authorization: Token some_secret
+```
+
+# Data Structures
+
+## ErrorMessage
++ error: Invalid content (required, string) - Error message
+
+
+<!-- include(entrypoints/scripts.apib) -->
+
+<!-- include(entrypoints/boot_files.apib) -->
+
+<!-- include(entrypoints/tasks.apib) -->
