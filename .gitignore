@@ -13,3 +13,4 @@ rpm/RPMS
 rpm/SOURCES
 rpm/SPECS
 rpm/SRPMS
+__pycache__
