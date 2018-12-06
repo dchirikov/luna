@@ -1,0 +1,63 @@
+# Data Structures
+
+## TorrentFileBasicInfo
++ id: 5b06cfb7c6cbe83114b8adb1 (required, string) - ID of the boot file
++ tarball_basename: `03724673-d446-4e21-be05-15dece1779f5.tgz` (required, string) - Name of the tarball file on the filesystem
++ torrent_basename: `472786ab-3e4f-4ec8-8c6c-93c65640da10.torrent` (required, string) - Name of the torrent file on the filesystem
+
+## TorrentFileFullInfo
++ id: 5b06cfb7c6cbe83114b8adb1 (required, string) - ID of the boot file
++ tarball_basename: `03724673-d446-4e21-be05-15dece1779f5.tgz` (required, string) - Name of the tarball file on the filesystem
++ torrent_basename: `472786ab-3e4f-4ec8-8c6c-93c65640da10.torrent` (required, string) - Name of the torrent file on the filesystem
++ tarball_fullpath: /path/to/file/03724673\-d446\-4e21\-be05\-15dece1779f5.tgz (required, string) - Full path of the tarball file on the filesystem
++ torrent_fullpath: /path/to/file/472786ab\-3e4f\-4ec8\-8c6c\-93c65640da10.torrent (required, string) - Full path of the torrent file on the filesystem
++ time: 2018-11-30 15:10:49.542714515+01:00 (required, string) - Time in RFC 3339 format
+
+## TorrentFileList (array)
++ (TorrentFileBasicInfo)
+
+# Group Torrent Files
+Content of the OS disctributed BitTorrent protocol
+
+## Torrent files [/torrent_files]
+Endpoint for torrent files
+
+### List torrent files [GET]
+Returns list of all torrents
+
++ Response 200 (application/json)
+
+    + Attributes (TorrentFileList)
+
+<!-- include(../errors/400-500.apib) -->
+
+### Upload tarball [POST]
+Return task of the job which creates and registers torrent
+
++ Request (multipart/form-data)
+
+<!-- include(../common/tasks_location.apib) -->
+
+<!-- include(../errors/400-404-500.apib) -->
+
+## Torrent file [/torrent_files/{id}]
+Operations on torrent files
+
+<!-- include(../common/id_def.apib) -->
+
+### Get info [GET]
+Get information about torrent file
+
++ Response 200 (application/json)
+
+     + Attributes (TorrentFileFullInfo)
+
+<!-- include(../errors/400-404-500.apib) -->
+
+### Delete [DELETE]
+Delete torrent file
+
++ Response 204
+
+<!-- include(../errors/400-404-500.apib) -->
+
