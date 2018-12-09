@@ -5,6 +5,7 @@ RUN yum install -y https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/
 RUN yum install -y https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-tools-4.0.4-1.el7.x86_64.rpm
 RUN yum install -y https://github.com/rabbitmq/erlang-rpm/releases/download/v21.1.2/erlang-21.1.2-1.el7.centos.x86_64.rpm
 RUN yum install -y https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.7.9/rabbitmq-server-3.7.9-1.el7.noarch.rpm
+RUN yum install -y nginx
 RUN yum install -y python2-pip
 RUN pip2 install supervisor
 RUN yum install -y python36 python36-setuptools
@@ -16,4 +17,8 @@ COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 RUN useradd -r luna
 COPY conf/supervisor/supervisord.conf /etc/supervisord.conf
+COPY conf/mongo/mongod.conf /etc/mongod.conf
+COPY conf/nginx/nginx.conf.in /etc/nginx/nginx.conf.in
+COPY conf/gunicorn/gunicorn.conf /etc/gunicorn/gunicorn.conf
+COPY conf/bin/lunad /usr/local/bin/lunad
 ENTRYPOINT ["/entrypoint.sh"]
