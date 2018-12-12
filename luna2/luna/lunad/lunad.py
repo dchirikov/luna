@@ -1,61 +1,46 @@
-#!/env/bin/python
+# Written by Dmitry Chirikov <dmitry@chirikov.ru>
+# Created in ClusterVision <infonl@clustervision.com>
+#
+# This file is part of Luna, cluster provisioning tool
+# https://github.com/clustervision/luna
+#
+# This file is part of Luna.
+
+# Luna is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Luna is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Luna.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+Boilerplate for lunad:app
+"""
 import pkgutil
 import importlib
-from flask import Flask, g
-from lunad.utils import LunadRuntimeError, get_database_uri
-import logging
-import os
-from pathlib import Path
+from flask import Flask
 from lunad import extentions, lunad_blueprints
 
-app = Flask(__name__)
+APP = Flask(__name__)
 
-# use gunicorn logger
-gunicorn_logger = logging.getLogger("gunicorn.error")
-app.logger.handlers = gunicorn_logger.handlers
-app.logger.setLevel(gunicorn_logger.level)
+extentions.init_app(APP)
 
-extentions.init_app(app)
-
-# app config
-app.config["APPLICATION_ROOT"] = extentions.lunad_config['api_ver']
-
-# define boot and torrent dirs
-luna_path = extentions.lunad_config['store']['path']
-
-app.logger.info(f"Luna stores files in {luna_path}")
-
-boot_path = luna_path + '/boot'
-torrent_path = luna_path + '/torrents'
-
-app.config['BOOT_FILES_PATH'] = boot_path
-app.config['TORRENT_FILES_PATH'] = torrent_path
-
-# create boot and torrent dirs
-for path in [boot_path, torrent_path]:
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-# auth token
-try:
-    token = extentions.lunad_config['auth']['token']
-except KeyError:
-    raise LunadRuntimeError("REST API token not found")
-
-app.config['AUTH_TOKEN'] = token
-
-# db connection settings
-#app.config["MONGO_URI"] = get_database_uri(extentions.lunad_config)
-
-blueprints_suffix = "_blueprint"
-
+# TODO: Without ignoring type mypy will complain:
+# 'Module has no attribute "__path__"'
+# see https://github.com/python/mypy/issues/1422
 for importer, modname, ispkg in pkgutil.iter_modules(
-        lunad_blueprints.__path__):
+        lunad_blueprints.__path__):  # type: ignore
 
-    if modname.endswith(blueprints_suffix):
+    if modname.endswith(APP.config['BLUEPRINT_SUFFIX']):
         fullmodname = "lunad.lunad_blueprints." + modname
         module = importlib.import_module(fullmodname, modname)
-        app.register_blueprint(
-            getattr(module, modname[:-len(blueprints_suffix)]),
-            url_prefix=app.config["APPLICATION_ROOT"]
+        APP.register_blueprint(
+            getattr(module, modname[:-len(APP.config['BLUEPRINT_SUFFIX'])]),
+            url_prefix=APP.config["APPLICATION_ROOT"]
         )
