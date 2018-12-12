@@ -1,0 +1,17 @@
+[MISCELLANEOUS]
+notes=XXX,FIXME
+
+[LOGGING]
+logging-format-style=new
+
+[BASIC]
+good-names=i,
+           j,
+           k,
+           v,
+           ex,
+           Run,
+           _
+
+[FORMAT]
+max-line-length=80

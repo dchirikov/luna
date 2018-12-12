@@ -14,3 +14,4 @@ rpm/SOURCES
 rpm/SPECS
 rpm/SRPMS
 __pycache__
+.mypy_cache
