@@ -1,0 +1,29 @@
+# Data Structures
+
+## NodeIPsElem
++ type: `node_ips` (string, required)
++ id: `5c2cc095af14cec6a269460f_5c2cfa4ef8546bb155d1be1b` (string, required) - Compound ID nodeid_interfaceid
+
+## NodeIPsGET
++ links (object, required)
+    + self: /nodes/5c2cc095af14cec6a269460f/ips (string, required) - URI of the resource
++ data (array[NodeIPsElem], required, nullable)
+
+## NodeIpPATCH
++ data (object, required)
+    + type: `node_ips` (string, required) - Type of the resource
+    + id: `5c2cc095af14cec6a269460f_5c2cfa4ef8546bb155d1be1b` (string, required) - Compound ID nodeid_interfaceid
+    + attributes (object, required)
+        + mac: 00:01:02:03:04:05 (string, optional) - MAC address
+        + ip: 10.141.0.1 (string, optional) - IP address
+        + force: false (boolean, optional) - If true, IP address will be picked up from another host if necessary
+
+## NodeIpGET
++ data (object, required, nullable)
+    + type: `node_ips` (string, required) - Type of the resource
+    + id: `5c2cc095af14cec6a269460f_5c2cfa4ef8546bb155d1be1b` (string, required) - Compound ID nodeid_interfaceid
+    + attributes (object, required)
+        + _interface: eth0 (string, required) - Interface name
+        + mac: 00:01:02:03:04:05 (string, required) - MAC address
+        + ip: 10.141.0.1 (string, required) - IP address
+

@@ -1,0 +1,42 @@
+## Display IP addresses of the node [/nodes/{id}/ips]
+
++ Parameters
+    + id: 5c2cc095af14cec6a269460f (string, required) - ID of the object
+
+### List IPs [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (NodeIPsGET)
+
+<!-- include(../../../common/json-api.schema) -->
+
+## Manage IP addresses of the node [/nodes/{id}/ips/{ip_id}]
+
++ Parameters
+    + id: 5c2cc095af14cec6a269460f (string, required) - ID of the object
+    + `ip_id`: `5c2cc095af14cec6a269460f_5c2cfa4ef8546bb155d1be1b` (string, required) - Compound ID nodeid_interfaceid
+
+### Get info [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (NodeIpGET)
+
+<!-- include(../../../common/json-api.schema) -->
+
+### Change [PATCH]
+Change IP address
+
++ Request (application/vnd.api+json)
+
+    + Attributes (NodeIpPATCH)
+
+<!-- include(../../../common/json-api.schema) -->
+
++ Response 200
+
+    + Attributes (NodeIpGET)
+
+<!-- include(../../../common/json-api.schema) -->
+

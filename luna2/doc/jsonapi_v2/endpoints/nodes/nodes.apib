@@ -1,0 +1,102 @@
+<!-- include(datastructures.apib) -->
+
+# Group Nodes
+
+## Nodes [/nodes]
+
+### Create node [POST]
+
++ Request (application/vnd.api+json)
+
+    + Attributes (NodesPOST)
+
+<!-- include(../../common/json-api.schema) -->
+
++ Response 201 (application/vnd.api+json)
+
+    + Attributes (NodeGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+### List [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (NodesGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+## Node [/nodes/{id}]
+
++ Parameters
+    + id: 5c2cc095af14cec6a269460f (string, required) - ID of the object
+
+### Get info [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (NodeGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+### Change [PATCH]
+Updates status of the interface and updates timestamp.
+
++ Request (application/vnd.api+json)
+
+    + Attributes (NodePATCH)
+
+<!-- include(../../common/json-api.schema) -->
+
++ Response 200
+
+    + Attributes (NodeGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+### Delete [DELETE]
+
++ Response 204
+
+
+## Get node's group object [/nodes/{id}/group]
+
++ Parameters
+    + id: 5c2cc095af14cec6a269460f (string, required) - ID of the object
+
+### Get information about node's group [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (NodeGroupGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+## Display or change node-group relationships [/nodes/{id}/relationships/group]
+
++ Parameters
+    + id: 5c2cc095af14cec6a269460f (string, required) - ID of the object
+
+### Get information [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (NodeRelationshipsGroupGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+### Update relationships [POST]
+
++ Request (application/vnd.api+json)
+
+    + Attributes (NodeRelationshipsGroupPATCH)
+
+<!-- include(../../common/json-api.schema) -->
+
++ Response 200
+
+    + Attributes (NodeRelationshipsGroupGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+<!-- include(ips/ips.apib) -->

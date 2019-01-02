@@ -1,3 +1,5 @@
+<!-- include(ips/datastructures.apib) -->
+
 # Data Structures
 
 ## NodesPOST
@@ -5,16 +7,21 @@
     + type: nodes (string, required) - Type of the resource
     + attributes (object, required)
         + name: node001 (string, required) - Name if the network
-        + localboot: false (boolean, required) - Should node boot from local disk
-        + service: false (boolean, required) - Should node go into the service mode
-        + setupbmc: true (boolean, required) - Should node to configure BMC interface on install
-        + comment: compute node (tring, required) - Additional info
+        + localboot: false (boolean, optional) - Should node boot from local disk
+        + service: false (boolean, optional) - Should node go into the service mode
+        + setupbmc: true (boolean, optional) - Should node to configure BMC interface on install
+        + comment: compute node (string, optional) - Additional info
+        + discovery_parameters: `Ge0/1` (string, optional) - Additional options for discovery
         + tags: rack01, chassis01 (array[string], optional) - Tags for group
     + relationships (object, required)
         + group (object, required)
             + data (object, required)
                 + type: groups (string, required)
                 + id: 5c2cbedd1f932d19263b5324 (string, required)
+        + discovery_object (object, optional)
+            + data (object, required)
+                + type: switches (string, required)
+                + id: 5c2cda2afa4595df53a2b0ad (string, required)
 
 ## NodeElem
 + type: nodes (string, required) - Type of the resource
@@ -39,13 +46,28 @@
         + localboot: false (boolean, required) - Should node boot from local disk
         + service: false (boolean, required) - Should node go into the service mode
         + setupbmc: true (boolean, required) - Should node to configure BMC interface on install
-        + comment: compute node (tring, required) - Additional info
-        + tags: rack01, chassis01 (array[string], optional) - Tags for group
+        + comment: compute node (string, required) - Additional info
+        + discovery_parameters: `Ge0/1` (string, required) - Additional options for discovery
+        + tags: rack01, chassis01 (array[string], required) - Tags for group
     + relationships (object, required)
         + group (object, required)
+            + links (object, required)
+                + self: /nodes/5c2cc095af14cec6a269460f/relationships/group (string, required)
+                + related: /nodes/5c2cc095af14cec6a269460f/group (string, required)
             + data (object, required)
                 + type: groups (string, required)
                 + id: 5c2cbedd1f932d19263b5324 (string, required)
+        + discovery_object (object, required)
+            + links (object, required)
+                + self: /nodes/5c2cc095af14cec6a269460f/relationships/discovery_object (string, required)
+                + related: /nodes/5c2cc095af14cec6a269460f/discovery_object (string, required)
+            + data (object, required)
+                + type: switches (string, required)
+                + id: 5c2cda2afa4595df53a2b0ad (string, required)
+        + ips (object, optional)
+            + links (object, required)
+                + self: /nodes/5c2cc095af14cec6a269460f/ips (string, required)
+            + data (array[NodeIPsElem], required)
 
 ## NodePATCH
 + data (object, required)
@@ -57,10 +79,32 @@
         + localboot: false (boolean, required) - Should node boot from local disk
         + service: false (boolean, required) - Should node go into the service mode
         + setupbmc: true (boolean, required) - Should node to configure BMC interface on install
-        + comment: compute node (tring, required) - Additional info
+        + comment: compute node (string, required) - Additional info
+        + discovery_parameters: `Ge0/1` (string, optional) - Additional options for discovery
         + tags: rack01, chassis01 (array[string], optional) - Tags for group
     + relationships (object, required)
         + group (object, required)
             + data (object, required)
                 + type: groups (string, required)
                 + id: 5c2cbedd1f932d19263b5324 (string, required)
+        + discovery_object (object, optional)
+            + data (object, required)
+                + type: switches (string, required)
+                + id: 5c2cda2afa4595df53a2b0ad (string, required)
+
+## NodeRelationshipsGroupGET
++ links (object, required)
+    + self: /nodes/5c2cc095af14cec6a269460f/relationships/group (string, required) - URI of the resource
++ data (object, required)
+    + type: group (string, required) - Type of the resource
+    + id: 5c2ccfd9eb62de2494d862b7 (string, required) - ID of the resource
+
+## NodeRelationshipsGroupPATCH
++ data (object, required)
+    + type: group (string, required) - Type of the resource
+    + id: 5c2cd0426b82b51f89102ee7 (string, required) - ID of the resource
+
+## NodeGroupGET
++ links (object, required)
+    + self: /nodes/5c2cc095af14cec6a269460f/group (string, required) - URI of the resource
++ data (GroupGETdata, required)
