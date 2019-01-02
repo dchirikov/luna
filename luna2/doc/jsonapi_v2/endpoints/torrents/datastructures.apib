@@ -1,0 +1,34 @@
+# Data Structures
+
+## TorrentsPOST
++ data (object, required)
+    + type: torrents (string, required) - Type of the resource
+    + attributes (object, required)
+        + tarball_basename: `03724673-d446-4e21-be05-15dece1779f5.tgz` (string, required) - Name of the tarball file on the filesystem
+        + torrent_basename: `472786ab-3e4f-4ec8-8c6c-93c65640da10.torrent` (string, required) - Name of the torrent file on the filesystem
+        + tarball_fullpath: `/path/to/file/03724673-d446-4e21-be05-15dece1779f5.tgz` (string, required) - Full path of the tarball file on the filesystem
+        + torrent_fullpath: `/path/to/file/472786ab-3e4f-4ec8-8c6c-93c65640da10.torrent` (string, required) - Full path of the torrent file on the filesyst
+
+## TorrentGET
++ links (object, required)
+    + self: /torrents/5c217983a0d594b1638cf4bc (string, required) - URI of the resource
++ data (object, required, nullable)
+    + type: torrents (string, required) - Type of the resource
+    + id: 5c217983a0d594b1638cf4bc (string, required) - ID of the resource
+    + attributes (object, required)
+        + last_update: `2018-11-30 15:10:49.542714515+01:00` (string, required) - Time of the last status update (RFC 3339 format)
+        + tarball_basename: `03724673-d446-4e21-be05-15dece1779f5.tgz` (string, required) - Name of the tarball file on the filesystem
+        + torrent_basename: `472786ab-3e4f-4ec8-8c6c-93c65640da10.torrent` (string, required) - Name of the torrent file on the filesystem
+        + tarball_fullpath: `/path/to/file/03724673-d446-4e21-be05-15dece1779f5.tgz` (string, required) - Full path of the tarball file on the filesystem
+        + torrent_fullpath: `/path/to/file/472786ab-3e4f-4ec8-8c6c-93c65640da10.torrent` (string, required) - Full path of the torrent file on the filesyst
+
+## TorrentFileElem
++ type: torrents (string, required) - Type of the resource
++ id: 5c217983a0d594b1638cf4bc (string, required) - ID of the resource
++ links (object, required)
+    + self: /torrents/5c217983a0d594b1638cf4bc (string, required) - URI of the resource
+
+## TorrentsGET
++ links (object, required)
+    + self: /torrents (string, required) - URI of the resource
++ data (array[TorrentFileElem], required)

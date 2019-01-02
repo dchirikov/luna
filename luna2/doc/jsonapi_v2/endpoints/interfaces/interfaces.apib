@@ -1,0 +1,72 @@
+<!-- include(datastructures.apib) -->
+
+# Group Interfaces
+
+## Interfaces [/interfaces]
+
+### Create interface [POST]
+
++ Request (application/vnd.api+json)
+
+    + Attributes (InterfacesPOST)
+
+<!-- include(../../common/json-api.schema) -->
+
++ Response 201 (application/vnd.api+json)
+
+    + Attributes (InterfaceGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+### List [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (InterfacesGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+## Interface [/interfaces/{id}]
+
++ Parameters
+    + id: 5c28045ac7e5ed4c7a87a49d (string, required) - ID of the object
+
+### Get info [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (InterfaceGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+### Change [PATCH]
+Updates status of the interface and updates timestamp.
+
++ Request (application/vnd.api+json)
+
+    + Attributes (InterfacePATCH)
+
+<!-- include(../../common/json-api.schema) -->
+
++ Response 200
+
+    + Attributes (InterfaceGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+### Delete [DELETE]
+
++ Response 204
+
+## Get network IPv4  object [/interfaces/{id}/network_v4]
+
++ Parameters
+    + id: 5c28045ac7e5ed4c7a87a49d (string, required) - ID of the object
+
+### Get info about osimage object [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (InterfaceNetworkV4GET)
+
+<!-- include(../../common/json-api.schema) -->

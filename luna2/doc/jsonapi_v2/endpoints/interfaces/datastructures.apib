@@ -1,0 +1,87 @@
+# Data Structures
+
+## InterfacesPOST
++ data (object, required, nullable)
+    + type: interfaces (string, required) - Type of the resource
+    + attributes (object, required)
+        + name: eth0 (string, required) - DNS domain for node
+        + options: MTU=9000 (string, optional) - Additional options of the interface
+    + relationships (object, required)
+        + `network_v4` (object, optional)
+            + data (object, required)
+                + type: networks (string, required)
+                + id: 5c27f1c01254733e98bc9e72 (string, required)
+        + `network_v6` (object, optional)
+            + data (object, required)
+                + type: networks (string, required)
+                + id: 5c27f22861ad131698b92019 (string, required)
+
+## InterfacesElem
++ type: interfaces (string, required) - Type of the resource
++ id: 5c28045ac7e5ed4c7a87a49d (string, required) - ID of the resource
++ links (object, required)
+    + self: /interfaces/5c28045ac7e5ed4c7a87a49d (string, required) - URI of the resource
+
+## InterfacesGET
++ links (object, required)
+    + self: /interfaces (string, required) - URI of the resource
++ data (array[InterfacesElem], required, nullable)
+
+## InterfaceGET
++ links (object, required)
+    + self: /interfaces/5c28045ac7e5ed4c7a87a49d (string, required) - URI of the resource
++ data (object, required, nullable)
+    + type: interfaces (string, required) - type of the resource
+    + id: 5c28045ac7e5ed4c7a87a49d (string, required) - ID of the resource
+    + attributes (object, required)
+        + name: eth0 (string, required) - DNS domain for node
+        + options: MTU=9000 (string, required) - Additional options of the interface
+    + relationships (object, required)
+        + `network_v4` (object, required
+            + links (object, required)
+                + self: `/interfaces/5c28045ac7e5ed4c7a87a49d/relationships/network_v4` (string, required)
+                + related: `/interfaces/5c28045ac7e5ed4c7a87a49d/network_v4` (string, required))
+            + data (object, required)
+                + type: networks (string, required)
+                + id: 5c27f1c01254733e98bc9e72 (string, required)
+        + `network_v6` (object, required)
+            + links (object, required)
+                + self: `/interfaces/5c28045ac7e5ed4c7a87a49d/relationships/network_v6` (string, required)
+                + related: `/interfaces/5c28045ac7e5ed4c7a87a49d/network_v6` (string, required))
+            + data (object, required)
+                + type: networks (string, required)
+                + id: 5c27f22861ad131698b92019 (string, required)
+
+## InterfacePATCH
++ data (object, required, nullable)
+    + type: interfaces (string, required) - type of the resource
+    + id: 5c28045ac7e5ed4c7a87a49d (string, required) - ID of the resource
+    + attributes (object, optional)
+        + name: eth0 (string, optional) - DNS domain for node
+        + options: MTU=9000 (string, optional) - Additional options of the interface
+    + relationships (object, optional)
+        + `network_v4` (object, optional)
+            + data (object, required)
+                + type: networks (string, required)
+                + id: 5c27f1c01254733e98bc9e72 (string, required)
+        + `network_v6` (object, optional)
+            + data (object, required)
+                + type: networks (string, required)
+                + id: 5c27f22861ad131698b92019 (string, required)
+
+## InterfaceRelationshipsNetworkV4GET
++ links (object, required)
+    + self: `/interfaces/5c28045ac7e5ed4c7a87a49d/relationships/network_v4` (string, required) - URI of the resource
++ data (object, required)
+    + type: network (string, required) - type of the resource
+    + id: 5c2811c61b01167e7b18a611 (string, required) - id of the resource
+
+## InterfaceRelationshipsNetworkV4PATCH
++ data (object, required)
+    + type: network (string, required) - type of the resource
+    + id: 5c2811fde07d1f0002337976 (string, required) - id of the resource
+
+## InterfaceNetworkV4GET
++ links (object, required)
+    + self: `/interfaces/5c28045ac7e5ed4c7a87a49d/network_v4` (string, required) - URI of the resource
++ data (NetworkGETdata, required)

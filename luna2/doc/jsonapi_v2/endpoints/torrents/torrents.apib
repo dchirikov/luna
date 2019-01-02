@@ -1,0 +1,44 @@
+<!-- include(datastructures.apib) -->
+
+# Group Torrents
+
+## Torrent Files [/torrents]
+
+### Register torrent [POST]
+
++ Request (application/vnd.api+json)
+
+    + Attributes (TorrentsPOST)
+
+<!-- include(../../common/json-api.schema) -->
+
++ Response 201 (application/vnd.api+json)
+
+    + Attributes (TorrentGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+### List [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (TorrentsGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+## Torrent File [/torrents/{id}]
+
++ Parameters
+    + id: 5c2165c76c51cc414795a579 (required, string) - ID of the object
+
+### Get info [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (TorrentGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+### Delete [DELETE]
+
++ Response 204

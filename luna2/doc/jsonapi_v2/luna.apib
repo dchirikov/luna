@@ -1,0 +1,34 @@
+FORMAT: 1A
+HOST: http://localhost:7051
+
+# Luna
+RESTful api to iteract with Luna daemon
+
+Interfaces must comply [JSON:API specification](https://jsonapi.org)
+
+Value of type should be plural. For example: not task, but tasks; not node, but nodes, etc.
+
+Authentication is being performed using token:
+
+```http
+Authorization: Token some_secret
+```
+<!-- include(endpoints/tasks/tasks.apib) -->
+
+<!-- include(endpoints/scripts/scripts.apib) -->
+
+<!-- include(endpoints/uploads/uploads.apib) -->
+
+<!-- include(endpoints/boot_files/boot_files.apib) -->
+
+<!-- include(endpoints/torrents/torrents.apib) -->
+
+<!-- include(endpoints/osimage_chroot_options/osimage_chroot_options.apib) -->
+
+<!-- include(endpoints/osimages/osimages.apib) -->
+
+<!-- include(endpoints/networks/networks.apib) -->
+
+<!-- include(endpoints/interfaces/interfaces.apib) -->
+
+<!-- include(endpoints/groups/groups.apib) -->

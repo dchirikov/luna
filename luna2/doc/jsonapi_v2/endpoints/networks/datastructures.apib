@@ -1,0 +1,129 @@
+# Data Structures
+
+## NetworksPOST
++ data (object, required, nullable)
+    + type: networks (string, required) - Type of the resource
+    + attributes (object, required)
+        + name: cluster (string, required) - Name if the network
+        + `network_address`: 10.141.0.0 (string, required) - Network address
+        + prefix: 16 (number, optional) - Network prefix
+        + mask: 255.255.0.0 (string, optional) - Network mask
+        + `nameserver_ip`: 10.141.255.254 (string, required) - IP address of the nameserver in this network
+        + `nameserver_hostname`: controller (string, required) - Name of the nameserver
+        + `dhcp_range_start`: 10.141.128.1 (string, optional) - Start of the DHCP range
+        + `dhcp_range_end`: 10.141.140.254 (string, optional) - End of the DHCP range
+        + comment: provisioning network (string, optional) - Additional info about networks
+    + relationships (object, required)
+        + `zone_template` (object, required) - Script for lookup zone
+            + data (object, required)
+                + type: scripts (string, required)
+                + id: 5c2815222d6e7a8ad9820aed (string, required)
+        + `zone_arpa_template` (object, required) - Script for reverse lookup zone
+            + data (object, required)
+                + type: scripts (string, required)
+                + id: 5c281538ec5be6b5c77415b4 (string, required)
+
+## NetworksElem
++ type: networks (string, required) - Type of the resource
++ id: 5c2815e343c47d4d37f735ed (string, required) - ID of the resource
++ links (object, required)
+    + self: /networks/5c2815e343c47d4d37f735ed (string, required) - URI of the resource
+
+## NetworksGET
++ links (object, required)
+    + self: /networks (string, required) - URI of the resource
++ data (array[NetworksElem], required, nullable)
+
+## NetworkUsedByExample
++ type: nodes (string, required)
++ id: 5c2c067245ebbc81076431bf (string, required)
+
+## NetworkMetaHosts
++ host: node001 (string, required)
++ ip: 10.141.0.1 (string, required)
+
+## NetworkGETdata
++ type: networks (string, required) - Type of the resource
++ id: 5c2815e343c47d4d37f735ed (string, required) - ID of the resource
++ attributes (object, required)
+    + `last_update`: `2018-11-30 15:10:49.542714515+01:00` (string, required) - Time of the last status update (RFC 3339 format)
+    + name: cluster (string, required) - Name if the network
+    + `network_address:` 10.141.0.0 (string, required) - Network address
+    + prefix: 16 (number, required) - Network prefix
+    + mask: 255.255.0.0 (string, required) - Network mask
+    + `nameserver_ip`: 10.141.255.254 (string, required) - IP address of the nameserver in this network
+    + `nameserver_hostname`: controller (string, required) - Name of the nameserver
+    + `dhcp_range_start`: 10.141.128.1 (string, required) - Start of the DHCP range
+    + `dhcp_range_end`: 10.141.140.254 (string, required) - End of the DHCP range
+    + comment: provisioning network (string, required) - Additional info about networks
++ relationships (object, required)
+    + `zone_template` (object, required) - Script for lookup zone
+        + links (object, required)
+            + self: `/networks/5c2815e343c47d4d37f735ed/relationships/zone_template` (string, required)
+            + related: `/networks/5c2815e343c47d4d37f735ed/zone_template` (string, required)
+        + data (object, required)
+            + type: scripts (string, required)
+            + id: 5c2815222d6e7a8ad9820aed (string, required)
+    + `zone_arpa_template` (object, required) - Script for reverse lookup zone
+        + links (object, required)
+            + self: `/networks/5c2815e343c47d4d37f735ed/relationships/zone_arpa_template` (string, required)
+            + related: `/networks/5c2815e343c47d4d37f735ed/zone_arpa_template` (string, required)
+        + data (object, required)
+            + type: scripts (string, required)
+            + id: 5c281538ec5be6b5c77415b4 (string, required)
+    + used_by (array[NetworkUsedByExample], required, nullable)
++ meta (object, required)
+    + hosts (array[NetworkMetaHosts], required, nullable)
+
+## NetworkGET
++ links (object, required)
+    + self: /networks/5c2815e343c47d4d37f735ed (string, required) - URI of the resource
++ data (NetworkGETdata, required)
+
+## NetworkPATCH
++ data (object, required, nullable)
+    + type: networks (string, required) - Type of the resource
+    + id: 5c2815e343c47d4d37f735ed (string, required) - ID of the resource
+    + attributes (object, optional)
+        + name: cluster (string, optional) - Name if the network
+        + `network_address`: 10.141.0.0 (string, optional) - Network address
+        + prefix: 16 (number, optional) - Network prefix
+        + mask: 255.255.0.0 (string, optional) - Network mask
+        + `nameserver_ip`: 10.141.255.254 (string, optional) - IP address of the nameserver in this network
+        + `nameserver_hostname`: controller (string, optional) - Name of the nameserver
+        + `dhcp_range_start`: 10.141.128.1 (string, optional) - Start of the DHCP range
+        + `dhcp_range_end`: 10.141.140.254 (string, optional) - End of the DHCP range
+        + comment: provisioning network (string, optional) - Additional info about networks
+    + relationships (object, optional)
+        + `zone_template` (object, optional) - Script for lookup zone
+            + data (object, optional)
+                + type: scripts (string, optional)
+                + id: 5c2815222d6e7a8ad9820aed (string, optional)
+        + `zone_arpa_template` (object, optional) - Script for reverse lookup zone
+            + data (object, optional)
+                + type: scripts (string, optional)
+                + id: 5c281538ec5be6b5c77415b4 (string, optional)
+
+## NetworkRelationshipsZoneTemplateGET
++ links (object, required)
+    + self: `/networks/5c2815e343c47d4d37f735ed/relationships/zone_template` (string, required) - URI of the resource
++ data (object, required)
+    + type: scripts (string, required) - Type of the resource
+    + id: 5c2815222d6e7a8ad9820aed (string, required) - ID of the resource
+
+## NetworkRelationshipsZoneTemplatePATCH
++ data (object, required)
+    + type: scripts (string, required) - Type of the resource
+    + id: 5c2c003b75bc352e25e95850 (string, required) - ID of the resource
+
+## NetworkZoneTemplateGET
++ links (object, required)
+    + self: `/networks/5c2815e343c47d4d37f735ed/zone_template` (string, required) - URI of the resource
++ data (object, required)
+    + type: scripts (string, required) - Type of the resource
+    + id: 5c2c003b75bc352e25e95850 (string, required) - ID of the resource
+    + attributes (object, required)
+        + last_update: `2018-11-30 15:10:49.542714515+01:00` (string, required) - Time of the last status update (RFC 3339 format)
+        + content: `#!/bin/bash\n\necho test` (string, required) - Script content
+    + relationships (object, required)
+        + used_by (array[ScriptUsedByExample], required, nullable)

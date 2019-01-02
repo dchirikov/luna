@@ -1,0 +1,146 @@
+<!-- include(datastructures.apib) -->
+
+# Group Networks
+
+## Networks [/networks]
+
+### Create network [POST]
+
++ Request (application/vnd.api+json)
+
+    + Attributes (NetworksPOST)
+
+<!-- include(../../common/json-api.schema) -->
+
++ Response 201 (application/vnd.api+json)
+
+    + Attributes (NetworkGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+### List [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (NetworksGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+## Network [/networks/{id}]
+
++ Parameters
+    + id: 5c2815e343c47d4d37f735ed (string, required) - ID of the object
+
+### Get info [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (NetworkGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+### Change [PATCH]
+
++ Request (application/vnd.api+json)
+
+    + Attributes (NetworkPATCH)
+
+<!-- include(../../common/json-api.schema) -->
+
++ Response 200
+
+    + Attributes (NetworkGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+### Delete [DELETE]
+
++ Response 204
+
+## Get network's zone template object [/networks/{id}/zone_template]
+
++ Parameters
+    + id: 5c2815e343c47d4d37f735ed (string, required) - ID of the object
+
+### Get info [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (NetworkZoneTemplateGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+## Update network's zone template object relationship [/networks/{id}/relationships/zone_template]
+
++ Parameters
+    + id: 5c2815e343c47d4d37f735ed (string, required) - ID of the object
+
+### Get info [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (NetworkRelationshipsZoneTemplateGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+### Update kernel relationships [PATCH]
+
++ Request (application/vnd.api+json)
+
+    + Attributes (NetworkRelationshipsZoneTemplatePATCH)
+
+<!-- include(../../common/json-api.schema) -->
+
++ Response 200
+
+    + Attributes (NetworkRelationshipsZoneTemplateGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+## Network rendered zone config [/networks/{id}/zone]
+
++ Parameters
+    + id: 5c2815e343c47d4d37f735ed (string, required) - ID of the object
+
+### Get info [GET]
+Get rendered config for DNS zone
+
++ Response 200 (text/plain)
+
+     + Body
+
+            $TTL 604800
+            @ IN SOA            controller.compute. root.controller.compute. ( ; domain email
+                                1        ; serial number
+                                86400       ; refresh
+                                14400       ; retry
+                                3628800       ; expire
+                                604800 )     ; min TTL
+
+                                IN NS controller.compute.
+                                IN A 10.141.255.254
+
+            controller          IN A 10.141.255.254
+            node001             IN A 10.141.0.1
+
+## Network rendered reverse zone config [/networks/{id}/zone_arpa]
+
+### Get info [GET]
+Get rendered config for reverse DNS zone
+
++ Response 200 (text/plain)
+
+    + Body
+
+            $TTL 604800
+            @ IN SOA            controller.compute. root.controller.compute. ( ; domain email
+                                1        ; serial number
+                                86400       ; refresh
+                                14400       ; retry
+                                3628800       ; expire
+                                604800 )     ; min TTL
+
+                                IN NS controller.compute.
+
+            254.255             IN PTR controller.compute.
+            1.0                 IN PTR node001.compute.

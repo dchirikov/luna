@@ -1,0 +1,99 @@
+<!-- include(datastructures.apib) -->
+
+# Group Groups
+
+## Groups [/groups]
+
+### Create Group [POST]
+
++ Request (application/vnd.api+json)
+
+    + Attributes (GroupsPOST)
+
+<!-- include(../../common/json-api.schema) -->
+
++ Response 201 (application/vnd.api+json)
+
+    + Attributes (GroupGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+### List [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (GroupsGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+## Group [/groups/{id}]
+
++ Parameters
+    + id: 5c2582db72d035f0ff20dc6e (string, required) - ID of the object
+
+### Get info [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (GroupGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+### Change [PATCH]
+Updates status of the Group and updates timestamp.
+
++ Request (application/vnd.api+json)
+
+    + Attributes (GroupPATCH)
+
+<!-- include(../../common/json-api.schema) -->
+
++ Response 200
+
+    + Attributes (GroupGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+### Delete [DELETE]
+
++ Response 204
+
+## Get Group's osimage object [/groups/{id}/osimage]
+
++ Parameters
+    + id: 5c2582db72d035f0ff20dc6e (string, required) - ID of the object
+
+### Get info about osimage object [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (GroupOSImageGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+## Group osimage relationships [/osimages/{id}/relationships/osimage ]
+
++ Parameters
+    + id: 5c2582db72d035f0ff20dc6e (string, required) - ID of the object
+
+### Get info [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (GroupRelationshipsOSImageGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+### Update osimage relationships [PATCH]
+
++ Request (application/vnd.api+json)
+
+    + Attributes (GroupRelationshipsOSImagePATCH)
+
+<!-- include(../../common/json-api.schema) -->
+
++ Response 200
+
+    + Attributes (GroupRelationshipsOSImageGET)
+
+<!-- include(../../common/json-api.schema) -->

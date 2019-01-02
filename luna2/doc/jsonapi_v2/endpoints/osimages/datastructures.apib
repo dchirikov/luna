@@ -1,0 +1,158 @@
+# Data Structures
+
+## OSImagesPOST
++ data (object, required, nullable)
+    + type: osimages (string, required) - type of the resource
+    + attributes (object, required)
+        + `kernel_ver`: `3.10.0-514.26.2.el7.x86_64` (string, required) - Kernel version
+        + comment: osimage for compute nodes (string, required) - Additional info about osimage
+        + type: chroot (enum, required) - Method of reaching osimage resource
+    + relationships (object, required)
+        + kernel (object, required)
+            + data (object, required)
+                + type: boot_files (string, required)
+                + id: 5c24c7a78a278c425c1f75f4 (string, required)
+        + initrd (object, required)
+            + data (object, required)
+                + type: boot_files (string, required)
+                + id: 5c24c7d6393dfc3974642948 (string, required)
+        + torrent (object, required)
+            + data (object, required)
+                + type: torrent_files (string, required)
+                + id: 5c24c7f6ec95486e57156daa (string, required)
+        + boot_script (object, required)
+            + data (object, required)
+                + type: scripts (string, required)
+                + id: 5c24c8142dc3f58055f43eba (string, required)
+        + install_script (object, required)
+            + data (object, required)
+                + type: scripts (string, required)
+                + id: 5c24c8346a514d15ad0958fc (string, required)
+        + options (object, required)
+            + data (object, required)
+                + type: osimage_chroot_options (string, required)
+                + id: 5c24c864f295eed8cc2506d1 (string, required)
+
+## OSImagesElem
++ type: osimages (string, required) - Type of the resource
++ id: 5c24dfe2d7ebd713d890c011 (string, required) - ID of the resource
++ links (object, required)
+    + self: /osimages/5c24dfe2d7ebd713d890c011 (string, required) - URI of the resource
+
+## OSImagesGET
++ links (object, required)
+    + self: /osimages (string, required) - URI of the resource
++ data (array[OSImagesElem], required, nullable)
+
+## OSImageGETdata
++ type: osimages (string, required) - type of the resource
++ id: 5c24dfe2d7ebd713d890c011 (string, required) - ID of the resource
++ attributes (object, required)
+    + last_update: `2018-11-30 15:10:49.542714515+01:00` (string, required) - Time of the last status update (RFC 3339 format)
+    + `kernel_ver`: `3.10.0-514.26.2.el7.x86_64` (string, required) - Kernel version
+    + comment: osimage for compute nodes (string, required) - Additional info about osimage
+    + type: chroot (enum, required) - Method of reaching osimage resource
++ relationships (object, required)
+    + kernel (object, required)
+        + links (object, required)
+            + self: /osimages/5c24dfe2d7ebd713d890c011/relationships/kernel (string, required)
+            + related: /osimages/5c24dfe2d7ebd713d890c011/kernel (string, required)
+        + data (object, required)
+            + type: boot_files (string, required)
+            + id: 5c24c7a78a278c425c1f75f4 (string, required)
+    + initrd (object, required)
+        + links (object, required)
+            + self: /osimages/5c24dfe2d7ebd713d890c011/relationships/initrd (string, required)
+            + related: /osimages/5c24dfe2d7ebd713d890c011/initrd (string, required)
+        + data (object, required)
+            + type: boot_files (string, required)
+            + id: 5c24c7d6393dfc3974642948 (string, required)
+    + torrent (object, required)
+        + links (object, required)
+            + self: /osimages/5c24dfe2d7ebd713d890c011/relationships/torrent (string, required)
+            + related: /osimages/5c24dfe2d7ebd713d890c011/torrent (string, required)
+        + data (object, required)
+            + type: torrent_files (string, required)
+            + id: 5c24c7f6ec95486e57156daa (string, required)
+    + boot_script (object, required)
+        + links (object, required)
+            + self: /osimages/5c24dfe2d7ebd713d890c011/relationships/boot_script (string, required)
+            + related: /osimages/5c24dfe2d7ebd713d890c011/boot_script (string, required)
+        + data (object, required)
+            + type: scripts (string, required)
+            + id: 5c24c8142dc3f58055f43eba (string, required)
+    + install_script (object, required)
+        + links (object, required)
+            + self: /osimages/5c24dfe2d7ebd713d890c011/relationships/install_script (string, required)
+            + related: /osimages/5c24dfe2d7ebd713d890c011/install_script (string, required)
+        + data (object, required)
+            + type: scripts (string, required)
+            + id: 5c24c8346a514d15ad0958fc (string, required)
+    + options (object, required)
+        + links (object, required)
+            + self: /osimages/5c24dfe2d7ebd713d890c011/relationships/options (string, required)
+            + related: /osimages/5c24dfe2d7ebd713d890c011/options (string, required)
+        + data (object, required)
+            + type: osimage_chroot_options (string, required)
+            + id: 5c24c864f295eed8cc2506d1 (string, required)
+
+## OSImageGET
++ links (object, required)
+    + self: /osimages/5c24dfe2d7ebd713d890c011 (string, required) - URI of the resource
++ data (OSImageGETdata, required)
+
+## OSImagePATCH
++ data (object, required, nullable)
+    + type: osimages (string, required) - type of the resource
+    + id: 5c24dfe2d7ebd713d890c011 (string, required) - ID of the resource
+    + attributes (object, optional)
+        + `kernel_ver`: `3.10.0-514.26.2.el7.x86_64` (string, optional) - Kernel version
+        + comment: osimage for compute nodes (string, optional) - Additional info about osimage
+    + relationships (object, required)
+        + kernel (object, optional)
+            + data (object, required)
+                + type: boot_files (string, required)
+                + id: 5c24c7a78a278c425c1f75f4 (string, required)
+        + initrd (object, optional)
+            + data (object, required)
+                + type: boot_files (string, required)
+                + id: 5c24c7d6393dfc3974642948 (string, required)
+        + torrent (object, optional)
+            + data (object, required)
+                + type: torrent_files (string, required)
+                + id: 5c24c7f6ec95486e57156daa (string, required)
+        + boot_script (object, optional)
+            + data (object, required)
+                + type: scripts (string, required)
+                + id: 5c24c8142dc3f58055f43eba (string, required)
+        + install_script (object, optional)
+            + data (object, required)
+                + type: scripts (string, required)
+                + id: 5c24c8346a514d15ad0958fc (string, required)
+        + options (object, optional)
+            + data (object, required)
+                + type: osimage_chroot_options (string, required)
+                + id: 5c24c864f295eed8cc2506d1 (string, required)
+
+## OSImagesRelationshipsKernelGET
++ links (object, required)
+    + self: /osimages/5c24dfe2d7ebd713d890c011/relationships/kernel (string, required) - URI of the resource
++ data (object, required)
+    + type: kernel (string, required) - type of the resource
+    + id: 5c24c7a78a278c425c1f75f4 (string, required) - id of the resource
+
+## OSImagesRelationshipsKernelPATCH
++ data (object, required)
+    + type: kernel (string, required) - type of the resource
+    + id: 5c24f27f0eb1fe5a7ea54ef7 (string, required) - id of the resource
+
+## OSImageKernelGET
++ links (object, required)
+    + self: /osimages/5c24dfe2d7ebd713d890c011/kernel (string, required) - URI of the resource
++ data (object, required)
+    + type: bootfiles (string, required) - Type of the resource
+    + id: 5c24f27f0eb1fe5a7ea54ef7 (string, required) - ID of the resource
+    + attributes (object, required)
+        + last_update: `2018-11-30 15:10:49.542714515+01:00` (string, required) - Time of the last status update (RFC 3339 format)
+        + fullpath: some_path (required, string) - Full path to file on the filesystem
+        + basename: name_of_the_file (required, string) - Name of the file on the filesystem

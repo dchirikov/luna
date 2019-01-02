@@ -1,0 +1,30 @@
+# Data Structures
+
+## BootFilesPOST
++ data (object, required)
+    + type: bootfiles (string, required) - Type of the resource
+    + attributes (object, required)
+        + fullpath: some_path (required, string) - Full path to file on the filesystem
+        + basename: name_of_the_file (required, string) - Name of the file on the filesystem
+
+## BootFileGET
++ links (object, required)
+    + self: /bootfiles/5c2165c76c51cc414795a579 (string, required) - URI of the resource
++ data (object, required, nullable)
+    + type: bootfiles (string, required) - Type of the resource
+    + id: 5c2165c76c51cc414795a579 (string, required) - ID of the resource
+    + attributes (object, required)
+        + last_update: `2018-11-30 15:10:49.542714515+01:00` (string, required) - Time of the last status update (RFC 3339 format)
+        + fullpath: some_path (required, string) - Full path to file on the filesystem
+        + basename: name_of_the_file (required, string) - Name of the file on the filesystem
+
+## BootFileElem
++ type: bootfiles (string, required) - Type of the resource
++ id: 5c2165c76c51cc414795a579 (string, required) - ID of the resource
++ links (object, required)
+    + self: /bootfiles/5c2165c76c51cc414795a579 (string, required) - URI of the resource
+
+## BootFilesGET
++ links (object, required)
+    + self: /bootfiles (string, required) - URI of the resource
++ data (array[BootFileElem], required)

@@ -1,0 +1,100 @@
+<!-- include(datastructures.apib) -->
+
+# Group Tasks
+
+## Tasks [/tasks]
+
+### Create [POST]
+
++ Request (application/vnd.api+json)
+
+    + Attributes (TasksPOST)
+
+<!-- include(../../common/json-api.schema) -->
+
++ Response 201 (application/vnd.api+json)
+
+    + Attributes (TaskGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+### List [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (TasksGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+## Task [/tasks/{id}]
+
++ Parameters
+    + id: 5c1edc8147e1315ef68bdb75 (required, string) - ID of the object
+
+### Get info [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (TaskGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+### Change [PATCH]
+Updates status of the task and updates timestamp.
+
++ Request (application/vnd.api+json)
+
+    + Attributes (TaskPATCH)
+
+<!-- include(../../common/json-api.schema) -->
+
++ Response 200
+
+    + Attributes (TaskGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+### Delete [DELETE]
+
++ Response 204
+
+## Update relationships [/tasks/{id}/relationships/object]
+
++ Parameters
+    + id: 5c1edc8147e1315ef68bdb75 (required, string) - ID of the object
+
+### Get Info [GET]
+
++ Response 200 (application/vnd.api+json)
+
+     + Attributes (TaskRelationshipsObjectGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+### Update Relationship [PATCH]
+
++ Request (application/vnd.api+json)
+
+    + Attributes (TaskPATCH)
+
+<!-- include(../../common/json-api.schema) -->
+
++ Response 200
+
+    + Attributes (TaskGET)
+
+<!-- include(../../common/json-api.schema) -->
+
+## Task object [/tasks/{id}/object]
+
++ Parameters
+    + id: 5c1edc8147e1315ef68bdb75 (required, string) - ID of the object
+
+### Get Info [GET]
+
++ Response 200 (application/vnd.api+json)
+
+     + Attributes (TaskObjectGET)
+
+<!-- include(../../common/json-api.schema) -->
+

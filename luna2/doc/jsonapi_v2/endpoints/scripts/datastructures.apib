@@ -1,0 +1,42 @@
+# Data Structures
+
+## ScriptsPOST
++ data (object, required, nullable)
+    + type: scripts (string, required) - Type of the resource
+    + attributes (object, required)
+        + content: `#!/bin/bash\n\necho test` (string, required) - Script content
+
+## ScriptIdentifier
++ type: scripts (string, required) - Type of the resource
++ id: 5c210cb2de633285fe5e3e34 (string, required) - ID of the resource
++ links (object, required)
+    + self: /scripts/5c210cb2de633285fe5e3e34 (string, required) - URI of the resource
+
+## ScriptsGET
++ links (object, required)
+    + self: /scripts (string, required) - URI of the resource
++ data (array[ScriptIdentifier], required)
+
+## ScriptUsedByExample
++ type: osimages (string, required)
++ id: 5c24dfe2d7ebd713d890c011 (string, required)
+
+## ScriptGET
++ links (object, required)
+    + self: /scripts/5c210cb2de633285fe5e3e34 (string, required) - URI of the resource
++ data (object, required, nullable)
+    + type: scripts (string, required) - Type of the resource
+    + id: 5c210cb2de633285fe5e3e34 (string, required) - ID of the resource
+    + attributes (object, required)
+        + last_update: `2018-11-30 15:10:49.542714515+01:00` (string, required) - Time of the last status update (RFC 3339 format)
+        + content: `#!/bin/bash\n\necho test` (string, required) - Script content
+    + relationships (object, required)
+        + used_by (array[ScriptUsedByExample], required, nullable)
+
+
+## ScriptPATCH
++ data (object, required, nullable)
+    + type: scripts (string, required) - Type of the resource
+    + id: 5c210cb2de633285fe5e3e34 (string, required) - ID of the resource
+    + attributes (object, required)
+        + content: `#!/bin/bash\n\necho test` (string, optional) - Script content
