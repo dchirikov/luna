@@ -4,6 +4,7 @@
 + data (object, required, nullable)
     + type: groups (string, required) - type of the resource
     + attributes (object, required)
+        + name: compute (string, required) - Name of the OSImage
         + domain: cluster (string, optional) - DNS domain for node
         + ipmi_interface: BMC (string, optional) - Name of the interface will be used as management
         + comment: group for compute nodes (string, optional) - Additional info about group
@@ -57,6 +58,7 @@
     + id: 5c2582db72d035f0ff20dc6e (string, required) - ID of the resource
     + attributes (object, required)
         + last_update: `2018-11-30 15:10:49.542714515+01:00` (string, required) - Time of the last status update (RFC 3339 format)
+        + name: compute (string, required) - Name of the OSImage
         + domain: cluster (string, required) - DNS domain for node
         + ipmi_interface: BMC (string, required) - Name of the interface will be used as management
         + comment: group for compute nodes (string, required) - Additional info about group
@@ -115,6 +117,7 @@
     + type: groups (string, required) - type of the resource
     + id: 5c2582db72d035f0ff20dc6e (string, required) - ID of the resource
     + attributes (object, optional)
+        + name: compute (string, required) - Name of the OSImage
         + domain: cluster (string, optional) - DNS domain for node
         + ipmi_interface: BMC (string, optional) - Name of the interface will be used as management
         + comment: group for compute nodes (string, optional) - Additional info about group

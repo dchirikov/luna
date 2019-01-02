@@ -1,0 +1,66 @@
+# Data Structures
+
+## NodesPOST
++ data (object, required, nullable)
+    + type: nodes (string, required) - Type of the resource
+    + attributes (object, required)
+        + name: node001 (string, required) - Name if the network
+        + localboot: false (boolean, required) - Should node boot from local disk
+        + service: false (boolean, required) - Should node go into the service mode
+        + setupbmc: true (boolean, required) - Should node to configure BMC interface on install
+        + comment: compute node (tring, required) - Additional info
+        + tags: rack01, chassis01 (array[string], optional) - Tags for group
+    + relationships (object, required)
+        + group (object, required)
+            + data (object, required)
+                + type: groups (string, required)
+                + id: 5c2cbedd1f932d19263b5324 (string, required)
+
+## NodeElem
++ type: nodes (string, required) - Type of the resource
++ id: 5c2cc095af14cec6a269460f (string, required) - ID of the resource
++ links (object, required)
+    + self: /nodes/5c2cc095af14cec6a269460f (string, required) - URI of the resource
+
+## NodesGET
++ links (object, required)
+    + self: /nodes (string, required) - URI of the resource
++ data (array[NodeElem], required, nullable)
+
+## NodeGET
++ links (object, required)
+    + self: /nodes/5c2cc095af14cec6a269460f (string, required) - URI of the resource
++ data (object, required)
+    + type: nodes (string, required) - Type of the resource
+    + id: 5c2cc095af14cec6a269460f (string, required) - ID of the resource
+    + attributes (object, required)
+        + last_update: `2018-11-30 15:10:49.542714515+01:00` (string, required) - Time of the last status update (RFC 3339 format)
+        + name: node001 (string, required) - Nmae of the node
+        + localboot: false (boolean, required) - Should node boot from local disk
+        + service: false (boolean, required) - Should node go into the service mode
+        + setupbmc: true (boolean, required) - Should node to configure BMC interface on install
+        + comment: compute node (tring, required) - Additional info
+        + tags: rack01, chassis01 (array[string], optional) - Tags for group
+    + relationships (object, required)
+        + group (object, required)
+            + data (object, required)
+                + type: groups (string, required)
+                + id: 5c2cbedd1f932d19263b5324 (string, required)
+
+## NodePATCH
++ data (object, required)
+    + type: nodes (string, required) - Type of the resource
+    + id: 5c2cc095af14cec6a269460f (string, required) - ID of the resource
+    + attributes (object, required)
+        + last_update: `2018-11-30 15:10:49.542714515+01:00` (string, required) - Time of the last status update (RFC 3339 format)
+        + name: node001 (string, required) - Nmae of the node
+        + localboot: false (boolean, required) - Should node boot from local disk
+        + service: false (boolean, required) - Should node go into the service mode
+        + setupbmc: true (boolean, required) - Should node to configure BMC interface on install
+        + comment: compute node (tring, required) - Additional info
+        + tags: rack01, chassis01 (array[string], optional) - Tags for group
+    + relationships (object, required)
+        + group (object, required)
+            + data (object, required)
+                + type: groups (string, required)
+                + id: 5c2cbedd1f932d19263b5324 (string, required)
