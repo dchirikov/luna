@@ -72,13 +72,14 @@
             + type: scripts (string, required)
             + id: 5c281538ec5be6b5c77415b4 (string, required)
     + used_by (array[NetworkUsedByExample], required, nullable)
-+ meta (object, required)
-    + hosts (array[NetworkMetaHosts], required, nullable)
 
 ## NetworkGET
 + links (object, required)
     + self: /networks/5c2815e343c47d4d37f735ed (string, required) - URI of the resource
 + data (NetworkGETdata, required)
++ meta (object, required)
+    + `last_update`: `2018-11-30 15:10:49.542714515+01:00` (string, required) - Time of the last status update (RFC 3339 format)
+    + hosts (array[NetworkMetaHosts], required, nullable)
 
 ## NetworkPATCH
 + data (object, required, nullable)

@@ -1,0 +1,14 @@
+# Data Structures
+
+# IPMIPowerStatusPOST
++ status: on (string, required) - Last available status
++ info: Password mismatch (string, required) - Additional info
+
+# IPMIPowerStatusGET
++ `last_update`: `2018-11-30 15:10:49.542714515+01:00` (string, required) - Time of the last status update (RFC 3339 format)
++ status: on (string, required) - Last available status
++ info: Password mismatch (string, required) - Additional info
+
+# IPMIPowerStatusPATCH
++ command: on, off, cycle, reset, identify, noidentify, command:"sel list" (required, array[string]) - Command to issue
+

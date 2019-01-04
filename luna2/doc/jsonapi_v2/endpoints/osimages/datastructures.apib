@@ -7,7 +7,6 @@
         + name: compute (string, required) - Name of the OSImage
         + `kernel_ver`: `3.10.0-514.26.2.el7.x86_64` (string, required) - Kernel version
         + comment: osimage for compute nodes (string, required) - Additional info about osimage
-        + type: chroot (enum, required) - Method of reaching osimage resource
     + relationships (object, required)
         + kernel (object, required)
             + data (object, required)
@@ -49,11 +48,9 @@
 + type: osimages (string, required) - Type of the resource
 + id: 5c24dfe2d7ebd713d890c011 (string, required) - ID of the resource
 + attributes (object, required)
-    + last_update: `2018-11-30 15:10:49.542714515+01:00` (string, required) - Time of the last status update (RFC 3339 format)
     + name: compute (string, required) - Name of the OSImage
     + `kernel_ver`: `3.10.0-514.26.2.el7.x86_64` (string, required) - Kernel version
     + comment: osimage for compute nodes (string, required) - Additional info about osimage
-    + type: chroot (enum, required) - Method of reaching osimage resource
 + relationships (object, required)
     + kernel (object, required)
         + links (object, required)
@@ -97,6 +94,8 @@
         + data (object, required)
             + type: osimage_chroot_options (string, required)
             + id: 5c24c864f295eed8cc2506d1 (string, required)
++ meta (object, required)
+    + `last_update`: `2018-11-30 15:10:49.542714515+01:00` (string, required) - Time of the last status update (RFC 3339 format)
 
 ## OSImageGET
 + links (object, required)

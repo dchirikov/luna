@@ -41,8 +41,7 @@
     + type: nodes (string, required) - Type of the resource
     + id: 5c2cc095af14cec6a269460f (string, required) - ID of the resource
     + attributes (object, required)
-        + last_update: `2018-11-30 15:10:49.542714515+01:00` (string, required) - Time of the last status update (RFC 3339 format)
-        + name: node001 (string, required) - Nmae of the node
+        + name: node001 (string, required) - Name of the node
         + localboot: false (boolean, required) - Should node boot from local disk
         + service: false (boolean, required) - Should node go into the service mode
         + setupbmc: true (boolean, required) - Should node to configure BMC interface on install
@@ -68,6 +67,8 @@
             + links (object, required)
                 + self: /nodes/5c2cc095af14cec6a269460f/ips (string, required)
             + data (array[NodeIPsElem], required)
++ meta (object, required)
+    + `last_update`: `2018-11-30 15:10:49.542714515+01:00` (string, required) - Time of the last status update (RFC 3339 format)
 
 ## NodePATCH
 + data (object, required)

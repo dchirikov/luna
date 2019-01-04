@@ -1,0 +1,47 @@
+# Data Structures
+
+## PowerIPMIsPOST
++ data (object, required, nullable)
+    + type: `power_ipmi` (string, required) - Type of the resource
+    + attributes (object, required)
+        + interface: BMC (string, required) - Name of the management interface
+    + relationships (object, required)
+        + node (object, required)
+            + data (object, required)
+                + type: nodes (string, required)
+                + id: 5c2e2c919ba1f15053f13d8b (string, required)
+
+## PowerIPMIElem
++ type: `power_ipmi` (string, required) - Type of the resource
++ id: 5c2e2c919ba1f15053f13d8b (string, required) - ID of the node
++ links (object, required)
+    + self: /power/ipmi/5c2e2c919ba1f15053f13d8b (string, required) - URI of the resource
+
+## PowerIPMIsGET
++ links (object, required)
+    + self: /power/ipmi (string, required) - URI of the resource
++ data (array[PowerIPMIElem], required, nullable)
+
+## PowerIPMIGET
++ data (object, required, nullable)
+    + type: `power_ipmi` (string, required) - Type of the resource
+    + id: 5c2e2c919ba1f15053f13d8b (string, required) - ID of the node
+    + attributes (object, required)
+        + `last_update`: `2018-11-30 15:10:49.542714515+01:00` (string, required) - Time of the last status update (RFC 3339 format)
+        + interface: BMC (string, required) - Name of the management interface
+    + relationships (object, required)
+        + node (object, required)
+            + links (object, required)
+                + related: /power/ipmi/5c2e2c919ba1f15053f13d8b/node (string, required)
+            + data (object, required)
+                + type: nodes (string, required)
+                + id: 5c2e2c919ba1f15053f13d8b (string, required)
+
+## PowerIPMIPATCH
++ links (object, required)
+    + self: /power/ipmi/5c2e2c919ba1f15053f13d8b (string, required) - URI of the resource
++ data (object, required, nullable)
+    + type: `power_ipmi` (string, required) - Type of the resource
+    + id: 5c2e2c919ba1f15053f13d8b (string, required) - ID of the node
+    + attributes (object, required)
+        + interface: BMC (string, required) - Name of the management interface

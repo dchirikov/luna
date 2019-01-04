@@ -1,0 +1,32 @@
+<!-- include(datastructures.apib) -->
+
+## IPMI management interface for node [/power/ipmi/{id}/status]
+
++ Parameters
+    + id: 5c2e920a62dfdab619146296 (string, required) - ID of the node
+
+### Update node status [POST]
+
++ Request (application/json)
+
+    + Attributes (IPMIPowerStatusPOST)
+
++ Response 204 (application/json)
+
+### Get last node status [GET]
+
++ Response 200 (application/json)
+
+    + Attributes (IPMIPowerStatusGET)
+
+### Request for update status [PATCH]
+
++ Request (application/json)
+
+    + Attributes (IPMIPowerStatusPATCH)
+
++ Response 202 (application/json)
+
+    + Headers
+
+            Location: /tasks/5c2e93d32b3bdf47f5a45aa3

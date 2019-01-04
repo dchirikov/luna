@@ -18,7 +18,6 @@
     + type: tasks (string, required) - Type of the resource
     + id: 5c1edc8147e1315ef68bdb75 (string, required) - ID of the resource
     + attributes (object, required)
-        + last_update: `2018-11-30 15:10:49.542714515+01:00` (string, required) - Time of the last status update (RFC 3339 format)
         + initiator: torrent_files (string, required) - Name of the subsystem started the task
         + status: done, pending, started, error, timeout (enum, required) - Status of the task
         + eta: 60 (number, required) - Task expected to be running
@@ -33,6 +32,8 @@
                 + id: 5c1edf79566d7e8a41376fbc (string, required) - ID of the resource
                 + links (object, required)
                     + self: /torrent_files/5c1edf79566d7e8a41376fbc (string, required) - URI of the resource
++ meta (object, required)
+    + `last_update`: `2018-11-30 15:10:49.542714515+01:00` (string, required) - Time of the last status update (RFC 3339 format)
 
 ## TasksPOST
 + data (object, required, nullable)

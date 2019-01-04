@@ -1,0 +1,60 @@
+<!-- include(datastructures.apib) -->
+
+# Group Power IPMI
+
+## Manage IPMI management method for node [/power/ipmi]
+
+### Add IPMI management method [POST]
+
++ Request (application/vnd.api+json)
+
+    + Attributes (PowerIPMIsPOST)
+
+<!-- include(../../../common/json-api.schema) -->
+
++ Response 201 (application/vnd.api+json)
+
+    + Attributes (PowerIPMIGET)
+
+<!-- include(../../../common/json-api.schema) -->
+
+### List [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (PowerIPMIsGET)
+
+<!-- include(../../../common/json-api.schema) -->
+
+## Change or delete node from method [/power/ipmi/{id}]
+
++ Parameters
+    + id: 5c2e920a62dfdab619146296 (string, required) - ID of the node
+
+### Get info [GET]
+
++ Response 200 (application/vnd.api+json)
+
+    + Attributes (PowerIPMIGET)
+
+<!-- include(../../../common/json-api.schema) -->
+
+### Change parameters [PATCH]
+
++ Request (application/vnd.api+json)
+
+    + Attributes (PowerIPMIPATCH)
+
+<!-- include(../../../common/json-api.schema) -->
+
++ Response 200
+
+    + Attributes (PowerIPMIGET)
+
+<!-- include(../../../common/json-api.schema) -->
+
+### Delete [DELETE]
+
++ Response 204
+
+<!-- include(status/status.apib) -->
