@@ -1,0 +1,70 @@
+# Data Structures
+
+## SwitchesPOST
++ data (object, required, nullable)
+    + type: switches (string, required) - Type of the resource
+    + attributes (object, required)
+        + name: switch01 (string, required) - Name if the node
+        + ip: 10.141.100.1 (string, required) - IP of the switch
+        + discovery: true (boolean, optional) - Use for discovery of the nodes
+        + oid: `.1.3.6.1.2.1.17.7.1.2.2.1.2` (string, required) - OID for fetching learned MACs
+        + `read_community`: public (string, required) - Community for RO access
+        + comment: ToR switch rach01 (string, optional)
+        + tags: rack01 (array[string], optional) - Tags for switch
+    + relationships (object, required)
+        + network (object, required)
+            + data  (object, required)
+                + type: networks (string, required)
+                + id: 5c2f9d4286bb03e1dbeed351 (string, required)
+
+## SwitchesElem
++ type: switches (string, required) - Type of the resource
++ id: 5c2f9de74ac7ff339294088a (string, required) - ID of the resource
++ links (object, required)
+    + self: /switches/5c2f9de74ac7ff339294088a (string, required) - URI of the resource
+
+## SwitchesGET
++ links (object, required)
+    + self: /switches (string, required) - URI of the resource
++ data (array[SwitchesElem], required, nullable)
+
+## SwitchGET
++ links (object, required)
+    + self: /switches/5c2f9de74ac7ff339294088a (string, required) - URI of the resource
++ data (object, required, nullable)
+    + type: switches (string, required) - Type of the resource
+    + id: 5c2f9de74ac7ff339294088a (string, required) - ID of the resource
+    + attributes (object, required)
+        + name: switch01 (string, required) - Name if the node
+        + ip: 10.141.100.1 (string, required) - IP of the switch
+        + discovery: true (boolean, required) - Use for discovery of the nodes
+        + oid: `.1.3.6.1.2.1.17.7.1.2.2.1.2` (string, required) - OID for fetching learned MACs
+        + `read_community`: public (string, required) - Community for RO access
+        + comment: ToR switch rach01
+        + tags: rack01 (array[string], optional) - Tags for switch
+    + relationships (object, required)
+        + network (object, required)
+            + links (object, required)
+                + self: /switches/5c2f9de74ac7ff339294088a/relationships/group (string, required)
+                + related: /switches/5c2f9de74ac7ff339294088a/group (string, required)
+            + data  (object, required)
+                + type: networks (string, required)
+                + id: 5c2f9d4286bb03e1dbeed351 (string, required)
+
+## SwitchPATCH
++ data (object, required, nullable)
+    + type: switches (string, required) - Type of the resource
+    + id: 5c2f9de74ac7ff339294088a (string, required) - ID of the resource
+    + attributes (object, optional)
+        + name: switch01 (string, optional) - Name if the node
+        + ip: 10.141.100.1 (string, optional) - IP of the switch
+        + discovery: true (boolean, optional) - Use for discovery of the nodes
+        + oid: `.1.3.6.1.2.1.17.7.1.2.2.1.2` (string, optional) - OID for fetching learned MACs
+        + `read_community`: public (string, optional) - Community for RO access
+        + comment: ToR switch rach01 (string, optional)
+        + tags: rack01 (array[string], optional) - Tags for switch
+    + relationships (object, optional)
+        + network (object, optional)
+            + data  (object, required)
+                + type: networks (string, required)
+                + id: 5c2f9d4286bb03e1dbeed351 (string, required)

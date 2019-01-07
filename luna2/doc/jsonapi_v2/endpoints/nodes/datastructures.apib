@@ -6,19 +6,19 @@
 + data (object, required, nullable)
     + type: nodes (string, required) - Type of the resource
     + attributes (object, required)
-        + name: node001 (string, required) - Name if the network
+        + name: node001 (string, required) - Name if the node
         + localboot: false (boolean, optional) - Should node boot from local disk
         + service: false (boolean, optional) - Should node go into the service mode
         + setupbmc: true (boolean, optional) - Should node to configure BMC interface on install
         + comment: compute node (string, optional) - Additional info
         + discovery_parameters: `Ge0/1` (string, optional) - Additional options for discovery
-        + tags: rack01, chassis01 (array[string], optional) - Tags for group
+        + tags: rack01, chassis01 (array[string], optional) - Tags for node
     + relationships (object, required)
         + group (object, required)
             + data (object, required)
                 + type: groups (string, required)
                 + id: 5c2cbedd1f932d19263b5324 (string, required)
-        + discovery_object (object, optional)
+        + `discovery_object` (object, optional)
             + data (object, required)
                 + type: switches (string, required)
                 + id: 5c2cda2afa4595df53a2b0ad (string, required)
@@ -47,7 +47,7 @@
         + setupbmc: true (boolean, required) - Should node to configure BMC interface on install
         + comment: compute node (string, required) - Additional info
         + discovery_parameters: `Ge0/1` (string, required) - Additional options for discovery
-        + tags: rack01, chassis01 (array[string], required) - Tags for group
+        + tags: rack01, chassis01 (array[string], required) - Tags for node
     + relationships (object, required)
         + group (object, required)
             + links (object, required)
@@ -56,10 +56,10 @@
             + data (object, required)
                 + type: groups (string, required)
                 + id: 5c2cbedd1f932d19263b5324 (string, required)
-        + discovery_object (object, required)
+        + `discovery_object` (object, required)
             + links (object, required)
-                + self: /nodes/5c2cc095af14cec6a269460f/relationships/discovery_object (string, required)
-                + related: /nodes/5c2cc095af14cec6a269460f/discovery_object (string, required)
+                + self: `/nodes/5c2cc095af14cec6a269460f/relationships/discovery_object` (string, required)
+                + related: `/nodes/5c2cc095af14cec6a269460f/discovery_object` (string, required)
             + data (object, required)
                 + type: switches (string, required)
                 + id: 5c2cda2afa4595df53a2b0ad (string, required)
@@ -82,13 +82,13 @@
         + setupbmc: true (boolean, required) - Should node to configure BMC interface on install
         + comment: compute node (string, required) - Additional info
         + discovery_parameters: `Ge0/1` (string, optional) - Additional options for discovery
-        + tags: rack01, chassis01 (array[string], optional) - Tags for group
+        + tags: rack01, chassis01 (array[string], optional) - Tags for node
     + relationships (object, required)
         + group (object, required)
             + data (object, required)
                 + type: groups (string, required)
                 + id: 5c2cbedd1f932d19263b5324 (string, required)
-        + discovery_object (object, optional)
+        + `discovery_object` (object, optional)
             + data (object, required)
                 + type: switches (string, required)
                 + id: 5c2cda2afa4595df53a2b0ad (string, required)

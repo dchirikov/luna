@@ -18,7 +18,7 @@
     + type: tasks (string, required) - Type of the resource
     + id: 5c1edc8147e1315ef68bdb75 (string, required) - ID of the resource
     + attributes (object, required)
-        + initiator: torrent_files (string, required) - Name of the subsystem started the task
+        + initiator: `torrent_files` (string, required) - Name of the subsystem started the task
         + status: done, pending, started, error, timeout (enum, required) - Status of the task
         + eta: 60 (number, required) - Task expected to be running
         + output: IO Error (string, required) - Diagnostic output
@@ -28,10 +28,10 @@
                 + self: /tasks/5c1edc8147e1315ef68bdb75/relationships/object (string, required)
                 + related: /tasks/5c1edc8147e1315ef68bdb75/object (string, required)
             + data (object, required)
-                + type: torrent_files (string, required) - Type of the resource
+                + type: `torrent_files` (string, required) - Type of the resource
                 + id: 5c1edf79566d7e8a41376fbc (string, required) - ID of the resource
                 + links (object, required)
-                    + self: /torrent_files/5c1edf79566d7e8a41376fbc (string, required) - URI of the resource
+                    + self: `/torrent_files/5c1edf79566d7e8a41376fbc` (string, required) - URI of the resource
 + meta (object, required)
     + `last_update`: `2018-11-30 15:10:49.542714515+01:00` (string, required) - Time of the last status update (RFC 3339 format)
 
@@ -39,7 +39,7 @@
 + data (object, required, nullable)
     + type: tasks (string, required) - Type of the resource
     + attributes (object, required)
-        + initiator: torrent_files (string, required) - Name of the subsystem started the task
+        + initiator: `torrent_files` (string, required) - Name of the subsystem started the task
         + status: done, pending, started, error, timeout (enum, required) - Status of the task
         + eta: 60 (number, required) - Task expected to be running
         + output: IO Error (string, optional) - Diagnostic output
@@ -49,35 +49,35 @@
     + type: tasks (string, required) - Type of the resource
     + id: 5c1edc8147e1315ef68bdb75 (string, required) - ID of the resource
     + attributes (object, optional)
-        + initiator: torrent_files (string, optional) - Name of the subsystem started the task
+        + initiator: `torrent_files` (string, optional) - Name of the subsystem started the task
         + status: done, pending, started, error, timeout (enum, optional) - Status of the task
         + eta: 60 (number, optional) - Task expected to be running
         + output: IO Error (string, optional) - Diagnostic output
     + relationships (object, optional)
         + data (object, required)
-            + type: torrent_files (string, required) - Type of the resource
+            + type: `torrent_files` (string, required) - Type of the resource
             + id: 5c1edf79566d7e8a41376fbc (string, required) - ID of the resource
 
 ## TaskRelationshipsObjectGET
 + links (object, required)
     + self: /tasks/5c1edc8147e1315ef68bdb75/relationships/object (string, required) - URI of the resource
 + data (object, required, nullable)
-    + type: torrent_files (string, required) - Type of the resource
+    + type: `torrent_files` (string, required) - Type of the resource
     + id: 5c1edf79566d7e8a41376fbc (string, required) - ID of the resource
 
 ## TaskRelationshipsObjectPATCH
 + data (object, required, nullable)
-    + type: torrent_files (string, required) - Type of the resource
+    + type: `torrent_files` (string, required) - Type of the resource
     + id: 5c1edf79566d7e8a41376fbc (string, required) - ID of the resource
 
 ## TaskObjectGET
 + links (object, required)
     + self: /tasks/5c1edc8147e1315ef68bdb75/object (string, required) - URI of the resource
 + data (object, required, nullable)
-    + type: torrent_files (string, required) - Type of the resource
+    + type: `torrent_files` (string, required) - Type of the resource
     + id: 5c1edf79566d7e8a41376fbc (string, required) - ID of the resource
     + attributes (object, required)
-        + tarball_basename: `03724673-d446-4e21-be05-15dece1779f5.tgz` (string, required)
-        + torrent_basename: `472786ab-3e4f-4ec8-8c6c-93c65640da10.torrent` (string, required)
-        + tarball_fullpath: `/path/to/file/03724673-d446-4e21-be05-15dece1779f5.tgz` (string, required)
-        + torrent_fullpath: `/path/to/file/472786ab-3e4f-4ec8-8c6c-93c65640da10.torrent` (string, required)
+        + `tarball_basename`: `03724673-d446-4e21-be05-15dece1779f5.tgz` (string, required)
+        + `torrent_basename`: `472786ab-3e4f-4ec8-8c6c-93c65640da10.torrent` (string, required)
+        + `tarball_fullpath`: `/path/to/file/03724673-d446-4e21-be05-15dece1779f5.tgz` (string, required)
+        + `torrent_fullpath`: `/path/to/file/472786ab-3e4f-4ec8-8c6c-93c65640da10.torrent` (string, required)
