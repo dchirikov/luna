@@ -1,0 +1,17 @@
+# Data Structures
+
+## DiscoverySwitchesPOSTElem
++ data (object, required, nullable)
+    + type: `discovery_switches` (string, required) - Type of the resource
+    + attributes (object, required)
+        + mac: 01:02:03:04:05:06 (string, required) - Discovered MAC address
+        + port_name: Ge0/1 (string, required) - Discovered name of the port
+        + port_index: 1 (number, required) - Port index
+    + relationships (object, required)
+        + switch (object, required)
+            + data (object, required)
+                + type: switch (string, required)
+                + id: 5c337f2c7f903ad6ba3f4a9b (string, required)
+
+## DiscoverySwitchesPOST
++ (array[DiscoverySwitchesPOSTElem], required, nullable)
