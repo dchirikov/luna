@@ -43,7 +43,7 @@ void OptionParser::PrintHelp_() {
 OptionParser::OptionParser(int argc, char* argv[])
   : exec_name_(argv[0]) {
   char key;
-  while ((key = getopt(argc,argv,"hvslk:u:p:D")) != -1) {
+  while ((key = getopt(argc,argv,"hvskl:u:p:D")) != -1) {
     switch(key) {
       case 'h':
         PrintHelp_();

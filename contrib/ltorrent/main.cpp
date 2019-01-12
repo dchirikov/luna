@@ -23,17 +23,27 @@
 
 int main(int argc, char* argv[]) {
   auto opts = OptionParser(argc, argv);
+  if (opts.kill) {
+    if (LTorrent::changeUser(opts)) {
+      exit(EXIT_FAILURE);
+    }
+    if (LTorrent::killProcess(opts)) {
+      exit(EXIT_FAILURE);
+    }
+    exit(EXIT_SUCCESS);
+  }
   int rc = 0;
   if (LTorrent::createDirs(opts)) {
-    perror("Unable to create directories");
+    exit(EXIT_FAILURE);
+  }
+  if (LTorrent::changeUser(opts)) {
     exit(EXIT_FAILURE);
   }
   init_logger(opts);
   auto lt = LTorrent(opts);
-  run(lt.changeUser);
+  run(lt.daemonize);
   run(lt.createPidFile);
   run(lt.registerHandlers);
-  run(lt.daemonize);
   run(lt.run);
   run(lt.cleanup);
 }

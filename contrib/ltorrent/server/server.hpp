@@ -28,6 +28,9 @@
 #include "../optionparser/optionparser.hpp"
 #include "../logger/logger.hpp"
 #include <csignal>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #define log_error(msg) LOG4CPLUS_ERROR(logger_, msg)
 #define log_info(msg) LOG4CPLUS_INFO(logger_, msg)
@@ -39,8 +42,9 @@ public:
   LTorrent(const OptionParser &opts);
   static void stopHandler(int signal);
   static int createDirs(const OptionParser &opts);
+  static int changeUser(const OptionParser &opts);
+  static int killProcess(const OptionParser &opts);
   int createDirs();
-  int changeUser();
   int registerHandlers();
   int createPidFile();
   int daemonize();

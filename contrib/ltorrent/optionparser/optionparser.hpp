@@ -49,6 +49,7 @@ public:
   bool logFlush = true;
   bool daemonize = true;
   bool kill = false;
+  int killtimeout = DEFAULT_LTORRENT_KILLTIMEOUT;
   std::string logPatternInfo = "[%D{%m/%d/%y %H:%M:%S:%q}][%p] %m%n";
   std::string logPatternDebug = "[%D{%m/%d/%y %H:%M:%S:%q}][%p] %m [%b:%L]%n";
   uid_t pw_uid;

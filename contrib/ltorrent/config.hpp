@@ -26,5 +26,6 @@
 #define LTORRENT_USER             "LTORRENT_USER"
 #define DEFAULT_LTORRENT_USER     "luna"
 #define DEFAULT_LOGGER_NAME       "default"
-#define DEFAULT_LTORRENT_LOGFILE  "/var/log/luna/ltorrent2.log"
-#define DEFAULT_LTORRENT_PIDFILE  "/var/run/luna/ltorrent2.pid"
+#define DEFAULT_LTORRENT_LOGFILE  "/var/log/luna2/ltorrent.log"
+#define DEFAULT_LTORRENT_PIDFILE  "/var/run/luna2/ltorrent.pid"
+#define DEFAULT_LTORRENT_KILLTIMEOUT  5
