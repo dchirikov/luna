@@ -37,6 +37,7 @@ BuildRequires: rb_libtorrent-devel
 BuildRequires: boost-devel
 BuildRequires: systemd-units
 BuildRequires: selinux-policy-devel
+BuildRequires: log4cplus-devel
 
 # ///////////////////////////////////////////////
 # INSTALL REQUIREMENTS
@@ -56,6 +57,7 @@ Requires: python-hostlist
 Requires: bind-chroot
 Requires: python2-llfuse
 Requires: python-requests
+Requires: log4cplus
 
 Requires(pre):   %{_sbindir}/useradd,%{_sbindir}/userdel
 Requires(pre):   %{_bindir}/systemctl
