@@ -1,4 +1,5 @@
 all:
+	g++ torrents.cpp -std=c++11 -c -o torrents.o
 	g++ server.cpp -std=c++11 -c -o server.o
 
 clean:

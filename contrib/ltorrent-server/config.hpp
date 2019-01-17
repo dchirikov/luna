@@ -21,15 +21,17 @@
 
 #pragma once
 
-#include <log4cplus/logger.h>
-#include <log4cplus/configurator.h>
-#include <log4cplus/loggingmacros.h>
-#include <log4cplus/consoleappender.h>
-#include <log4cplus/fileappender.h>
-#include <log4cplus/loglevel.h>
-#include <memory>
-
-#include "../config.hpp"
-#include "../optionparser/optionparser.hpp"
-
-void init_logger(const OptionParser &opts);
+#define ENV_LTORRENT_HOMEDIR          "LTORRENT_HOMEDIR"
+#define DEFAULT_LTORRENT_HOMEDIR      "~luna/torrents"
+#define ENV_LTORRENT_USER             "LTORRENT_USER"
+#define DEFAULT_LTORRENT_USER         "luna"
+#define DEFAULT_LOGGER_NAME           "default"
+#define ENV_LTORRENT_LOGFILE          "LTORRENT_LOGFILE"
+#define DEFAULT_LTORRENT_LOGFILE      "/var/log/luna/ltorrent.log"
+#define ENV_LTORRENT_PIDFILE          "LTORRENT_PIDFILE"
+#define DEFAULT_LTORRENT_PIDFILE      "/var/run/luna/ltorrent.pid"
+#define ENV_LTORRENT_KILLTIMEOUT      "LTORRENT_KILLTIMEOUT"
+#define DEFAULT_LTORRENT_KILLTIMEOUT  5
+#define TORRENT_FILE_EXTENSION        ".torrent"
+#define DEFAULT_HARD_TIMEOUT_FOR_TORRENTS_FILES 3600
+#define DEFAULT_LUNA_GET_OSIMAGES_CMD

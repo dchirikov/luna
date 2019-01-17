@@ -31,20 +31,13 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-
-#define log_error(msg) LOG4CPLUS_ERROR(logger_, msg)
-#define log_info(msg) LOG4CPLUS_INFO(logger_, msg)
-#define log_debug(msg) LOG4CPLUS_DEBUG(logger_, msg)
-#define log_trace(msg) LOG4CPLUS_TRACE(logger_, msg)
+#include "torrents.hpp"
 
 class LTorrent {
 public:
   LTorrent(const OptionParser &opts);
   static void stopHandler(int signal);
-  static int createDirs(const OptionParser &opts);
-  static int changeUser(const OptionParser &opts);
-  static int killProcess(const OptionParser &opts);
-  int createDirs();
+  static void updateHandler(int signal);
   int registerHandlers();
   int createPidFile();
   int daemonize();
@@ -53,5 +46,5 @@ public:
 private:
   const OptionParser opts_;
   log4cplus::Logger logger_;
-  static bool running_;
+  static std::sig_atomic_t running_;
 };

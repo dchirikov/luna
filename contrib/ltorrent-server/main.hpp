@@ -24,6 +24,7 @@
 #include <iostream>
 #include "config.hpp"
 #include "optionparser/optionparser.hpp"
+#include "helpers/helpers.hpp"
 #include "logger/logger.hpp"
 #include "server/server.hpp"
 

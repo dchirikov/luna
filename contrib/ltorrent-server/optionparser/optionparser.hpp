@@ -32,6 +32,7 @@
 #include <pwd.h>
 #include <wordexp.h>
 #include <libgen.h>
+#include <inttypes.h>
 
 class OptionParser {
 public:
@@ -55,6 +56,7 @@ public:
   uid_t pw_uid;
   gid_t pw_gid;
 private:
+  void getEnvironment_();
   void PrintHelp_();
   void expandPath_(std::string* path);
   std::string getDirname_(const std::string path);

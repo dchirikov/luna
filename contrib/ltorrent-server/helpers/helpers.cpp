@@ -19,18 +19,10 @@
 * along with Luna.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "server.hpp"
+#include "helpers.hpp"
 
-bool LTorrent::running_ = true;
 
-LTorrent::LTorrent(const OptionParser &opts)
-  : opts_(opts),
-    logger_(log4cplus::Logger::getInstance(DEFAULT_LOGGER_NAME))
-{
-  log_trace(__PRETTY_FUNCTION__);
-};
-
-int create_dir(std::string path) {
+int helpers::create_dir(std::string path) {
   struct stat info;
   if (stat(path.c_str(), &info) == 0 ) {
     if ((info.st_mode & S_IFMT) == S_IFDIR) {
@@ -49,7 +41,7 @@ int create_dir(std::string path) {
   return(EXIT_SUCCESS);
 }
 
-int chowner(std::string path, uid_t pw_uid, gid_t pw_gid) {
+int helpers::chowner(std::string path, uid_t pw_uid, gid_t pw_gid) {
   if (chown(path.c_str(), pw_uid, pw_gid)) {
     std::perror(path.c_str());
     std::cerr << "Unable to chown "
@@ -59,7 +51,7 @@ int chowner(std::string path, uid_t pw_uid, gid_t pw_gid) {
   return(EXIT_SUCCESS);
 }
 
-int create_dir_and_chown(std::string path, uid_t pw_uid, gid_t pw_gid) {
+int helpers::create_dir_and_chown(std::string path, uid_t pw_uid, gid_t pw_gid) {
   if (create_dir(path)) {
     return(EXIT_FAILURE);
   }
@@ -69,7 +61,7 @@ int create_dir_and_chown(std::string path, uid_t pw_uid, gid_t pw_gid) {
   return(EXIT_SUCCESS);
 }
 
-int LTorrent::createDirs(const OptionParser &opts) {
+int helpers::createDirs(const OptionParser &opts) {
   if (create_dir_and_chown(opts.logDir, opts.pw_uid, opts.pw_gid)) {
     return(EXIT_FAILURE);
   }
@@ -79,18 +71,25 @@ int LTorrent::createDirs(const OptionParser &opts) {
   return(EXIT_SUCCESS);
 }
 
-int LTorrent::killProcess(const OptionParser &opts) {
+bool helpers::pidFileExists(const OptionParser &opts) {
   // check if pid file exists
   struct stat info;
   if (stat(opts.pidFile.c_str(), &info) != 0 ) {
-    std::perror("Error accessing PID file.");
-    std::cerr << "Unable to find '" << opts.pidFile << "'. "
-      << "Is daemon running?\n";
-    return(EXIT_FAILURE);
+    return(false);
   }
   // check if piddile is a file, actually
   if (!((info.st_mode & S_IFMT) == S_IFREG)) {
     std::cerr << "'" << opts.pidFile << "' is not a regular file\n";
+    return(false);
+  }
+  return(true);
+}
+
+int helpers::killProcess(const OptionParser &opts) {
+  if (!pidFileExists(opts)) {
+    std::perror("Error accessing PID file");
+    std::cerr << "Unable to find '" << opts.pidFile << "'. "
+      << "Is daemon running?\n";
     return(EXIT_FAILURE);
   }
   // read pid from pidfile
@@ -124,13 +123,7 @@ int LTorrent::killProcess(const OptionParser &opts) {
   return(EXIT_SUCCESS);
 }
 
-void LTorrent::stopHandler(int signal) {
-  auto logger = log4cplus::Logger::getInstance(DEFAULT_LOGGER_NAME);
-  LOG4CPLUS_TRACE(logger, __PRETTY_FUNCTION__);
-  running_ = false;
-}
-
-int LTorrent::changeUser(const OptionParser &opts) {
+int helpers::changeUser(const OptionParser &opts) {
   if (setuid(opts.pw_uid)) {
     std::perror("Unable to change user");
     std::cerr << "Unable to change EUID to " << opts.pw_uid
@@ -140,99 +133,21 @@ int LTorrent::changeUser(const OptionParser &opts) {
   return(EXIT_SUCCESS);
 }
 
-int LTorrent::daemonize() {
-  log_trace(__PRETTY_FUNCTION__);
-  if (!opts_.daemonize) {
-    log_debug("Running in foreground");
-    return(EXIT_SUCCESS);
+std::vector<std::string> helpers::readDirectory(const std::string& name) {
+  std::vector<std::string> res;
+  DIR* dirp = opendir(name.c_str());
+  struct dirent * dp;
+  while ((dp = readdir(dirp)) != NULL) {
+    res.push_back(dp->d_name);
   }
-  log_debug("Starting to daemonize");
-  pid_t pid;
-  // first fork
-  pid = fork();
-  if (pid < 0) {
-    log_error("Unable to perform first fork");
-    return(EXIT_FAILURE);
-  }
-  // parent exit
-  if (pid > 0) {
-    exit(EXIT_SUCCESS);
-  }
-  log_debug("First fork succeded");
-  // child become session leader
-  if (setsid() < 0) {
-    log_error("Unable to become session leader.");
-    exit(EXIT_FAILURE);
-  }
-  // second fork
-  if (pid < 0) {
-    log_error("Unable to perform second fork");
-    return(EXIT_FAILURE);
-  }
-  // parent exit (first child)
-  if (pid > 0) {
-    exit(EXIT_SUCCESS);
-  }
-  // current process is grandchild
-  // set new file perms
-  umask(0);
-  // close STDIN, SDTOUT and STDERR
-  for (int i=0; i>=2; i++)
-  {
-    close(i);
-  }
-
-  return(EXIT_SUCCESS);
+  closedir(dirp);
+  return res;
 }
 
-int LTorrent::registerHandlers() {
-  log_trace(__PRETTY_FUNCTION__);
-  std::signal(SIGINT, stopHandler);
-  std::signal(SIGTERM, stopHandler);
-  return(EXIT_SUCCESS);
-}
-
-int LTorrent::createPidFile() {
-  log_trace(__PRETTY_FUNCTION__);
-  struct stat info;
-  if (stat(opts_.pidFile.c_str(), &info) == 0 ) {
-    log_error("'" << opts_.pidFile << "' already exists.");
-    return(EXIT_FAILURE);
+std::ostream& operator <<(
+    std::ostream& os, const std::vector<std::string>& v) {
+  for (auto it = v.begin(); it != v.end(); it++) {
+    os << *it << "; ";
   }
-  auto pid = getpid();
-  log_info("Running PID " << pid);
-  std::ofstream pidfile;
-  log_debug("Write PID to pidfile");
-  pidfile.open(opts_.pidFile);
-  pidfile << pid;
-  pidfile << "\n";
-  pidfile.close();
-  return(EXIT_SUCCESS);
+  return os;
 }
-
-int LTorrent::cleanup() {
-  log_trace(__PRETTY_FUNCTION__);
-  if (std::remove(opts_.pidFile.c_str()) != 0 ) {
-    log_error("Unable to delete " << opts_.pidFile);
-    return(EXIT_FAILURE);
-  }
-  return(EXIT_SUCCESS);
-}
-
-int LTorrent::run() {
-  log_trace(__PRETTY_FUNCTION__);
-  // change directory
-  if (chdir(opts_.homeDir.c_str())) {
-    log_error("Unable to change directory to '" << opts_.homeDir << "'");
-    return(EXIT_FAILURE);
-  }
-  log_debug("Run main loop");
-  while (running_) {
-    log_trace("running");
-    sleep(1);
-  }
-  log_debug("stopping");
-
-  return(0);
-}
-

@@ -21,11 +21,21 @@
 
 #pragma once
 
-#define LTORRENT_HOMEDIR          "LTORRENT_HOMEDIR"
-#define DEFAULT_LTORRENT_HOMEDIR  "~luna/torrents"
-#define LTORRENT_USER             "LTORRENT_USER"
-#define DEFAULT_LTORRENT_USER     "luna"
-#define DEFAULT_LOGGER_NAME       "default"
-#define DEFAULT_LTORRENT_LOGFILE  "/var/log/luna2/ltorrent.log"
-#define DEFAULT_LTORRENT_PIDFILE  "/var/run/luna2/ltorrent.pid"
-#define DEFAULT_LTORRENT_KILLTIMEOUT  5
+#include <log4cplus/logger.h>
+#include <log4cplus/configurator.h>
+#include <log4cplus/loggingmacros.h>
+#include <log4cplus/consoleappender.h>
+#include <log4cplus/fileappender.h>
+#include <log4cplus/loglevel.h>
+#include <memory>
+
+#include "../config.hpp"
+#include "../optionparser/optionparser.hpp"
+
+#define log_error(msg) LOG4CPLUS_ERROR(logger_, msg)
+#define log_warning(msg) LOG4CPLUS_WARN(logger_, msg)
+#define log_info(msg) LOG4CPLUS_INFO(logger_, msg)
+#define log_debug(msg) LOG4CPLUS_DEBUG(logger_, msg)
+#define log_trace(msg) LOG4CPLUS_TRACE(logger_, msg)
+
+void init_logger(const OptionParser &opts);

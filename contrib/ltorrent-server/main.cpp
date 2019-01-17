@@ -24,23 +24,28 @@
 int main(int argc, char* argv[]) {
   auto opts = OptionParser(argc, argv);
   if (opts.kill) {
-    if (LTorrent::changeUser(opts)) {
+    std::cout << "Trying to kill process.\n";
+    if (helpers::changeUser(opts)) {
       exit(EXIT_FAILURE);
     }
-    if (LTorrent::killProcess(opts)) {
+    if (helpers::killProcess(opts)) {
       exit(EXIT_FAILURE);
     }
     exit(EXIT_SUCCESS);
   }
-  int rc = 0;
-  if (LTorrent::createDirs(opts)) {
+  if (helpers::pidFileExists(opts)) {
+    std::cerr << "'" << opts.pidFile << "' already exists.\n";
     exit(EXIT_FAILURE);
   }
-  if (LTorrent::changeUser(opts)) {
+  int rc = 0;
+  if (helpers::createDirs(opts)) {
+    exit(EXIT_FAILURE);
+  }
+  if (helpers::changeUser(opts)) {
     exit(EXIT_FAILURE);
   }
   init_logger(opts);
-  auto lt = LTorrent(opts);
+  LTorrent lt(opts);
   run(lt.daemonize);
   run(lt.createPidFile);
   run(lt.registerHandlers);

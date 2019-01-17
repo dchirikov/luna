@@ -42,6 +42,7 @@ void OptionParser::PrintHelp_() {
 
 OptionParser::OptionParser(int argc, char* argv[])
   : exec_name_(argv[0]) {
+  OptionParser::getEnvironment_();
   char key;
   while ((key = getopt(argc,argv,"hvskl:u:p:D")) != -1) {
     switch(key) {
@@ -97,4 +98,26 @@ std::string OptionParser::getDirname_(const std::string path) {
   auto dir = std::string(dirname(tmp));
   free(tmp);
   return dir;
+}
+
+void  OptionParser::getEnvironment_() {
+  if (const char* tmp = std::getenv(ENV_LTORRENT_HOMEDIR)) {
+    homeDir = std::string(tmp);
+  }
+  if (const char* tmp = std::getenv(ENV_LTORRENT_USER)) {
+    user = std::string(tmp);
+  }
+  if (const char* tmp = std::getenv(ENV_LTORRENT_LOGFILE)) {
+    logFile = std::string(tmp);
+  }
+  if (const char* tmp = std::getenv(ENV_LTORRENT_PIDFILE)) {
+    pidFile = std::string(tmp);
+  }
+  if (const char* tmp = std::getenv(ENV_LTORRENT_KILLTIMEOUT)) {
+    char* endptr;
+    killtimeout = strtoumax(tmp,&endptr,10);
+    if (errno) {
+      killtimeout = DEFAULT_LTORRENT_KILLTIMEOUT;
+    }
+  }
 }
