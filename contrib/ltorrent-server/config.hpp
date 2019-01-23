@@ -34,4 +34,10 @@
 #define DEFAULT_LTORRENT_KILLTIMEOUT  5
 #define TORRENT_FILE_EXTENSION        ".torrent"
 #define DEFAULT_HARD_TIMEOUT_FOR_TORRENTS_FILES 3600
-#define DEFAULT_LUNA_GET_OSIMAGES_CMD
+#define DEFAULT_LTORRENT_GET_OSIMAGES_CMD "/usr/bin/python", \
+  "-c", \
+  "import luna; \
+      print chr(10).join( \
+          [luna.OsImage(n).get('torrent') \
+            for n in luna.list('osimage') if luna.OsImage(n).get('torrent')] \
+      )"

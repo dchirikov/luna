@@ -22,7 +22,7 @@
 #include "helpers.hpp"
 
 
-int helpers::create_dir(std::string path) {
+int helpers::create_dir(const std::string& path) {
   struct stat info;
   if (stat(path.c_str(), &info) == 0 ) {
     if ((info.st_mode & S_IFMT) == S_IFDIR) {
@@ -41,7 +41,7 @@ int helpers::create_dir(std::string path) {
   return(EXIT_SUCCESS);
 }
 
-int helpers::chowner(std::string path, uid_t pw_uid, gid_t pw_gid) {
+int helpers::chowner(const std::string& path, uid_t pw_uid, gid_t pw_gid) {
   if (chown(path.c_str(), pw_uid, pw_gid)) {
     std::perror(path.c_str());
     std::cerr << "Unable to chown "
@@ -51,7 +51,7 @@ int helpers::chowner(std::string path, uid_t pw_uid, gid_t pw_gid) {
   return(EXIT_SUCCESS);
 }
 
-int helpers::create_dir_and_chown(std::string path, uid_t pw_uid, gid_t pw_gid) {
+int helpers::create_dir_and_chown(const std::string& path, uid_t pw_uid, gid_t pw_gid) {
   if (create_dir(path)) {
     return(EXIT_FAILURE);
   }
@@ -150,4 +150,181 @@ std::ostream& operator <<(
     os << *it << "; ";
   }
   return os;
+}
+
+helpers::Runner::Runner(const std::string& cmd, const std::string& input, int timeout)
+  : input_(input), timeout_(timeout), out_(), err_()
+{
+    typedef boost::tokenizer< boost::escaped_list_separator<char> > Tokenizer;
+    boost::escaped_list_separator<char> Separator( '\\', ' ', '\"' );
+    Tokenizer tok(cmd, Separator );
+
+    for( auto it = tok.begin(); it != tok.end(); ++it )
+      arguments_.push_back(*it);
+
+}
+
+helpers::Runner::Runner(const std::vector<std::string>& cmd, const std::string& input, int timeout)
+  : input_(input), timeout_(timeout), out_(), err_()
+{
+    for (auto it = cmd.begin(); it != cmd.end(); ++it )
+      arguments_.push_back(*it);
+
+}
+
+bool helpers::Runner::readPipe_(int p, std::ostringstream& out) {
+    int nread = 0;
+    char buf[msgSize_];
+    // read call if return -1 then pipe is
+    // empty because of fcntl
+    nread = read(p, buf, msgSize_);
+    switch (nread) {
+    case -1:
+
+        // case -1 means pipe is empty and errono
+        // set EAGAIN
+        if (errno == EAGAIN) {
+            return false;
+        }
+
+        else {
+            perror("read");
+            return true;
+        }
+
+    // case 0 means all bytes are read and EOF(end of conv.)
+    case 0:
+        return true;
+
+    default:
+
+        // text read
+        // by default return no. of bytes
+        // which read call read at that time
+        out << std::string(buf).substr(0, nread);
+        return false;
+    }
+}
+
+void helpers::Runner::parentRead_(int po, int pe) {
+
+    bool endo = false;
+    bool ende = false;
+    bool exited = false;
+    int status = 0;
+    std::time_t started = std::time(nullptr);
+    while (1) {
+      if (endo & ende & exited)
+        break;
+      if (!endo)
+        endo = readPipe_(po, out_);
+      if (!ende)
+        ende = readPipe_(pe, err_);
+      if (!exited) {
+        auto w = waitpid(childpid_,  &status, WNOHANG);
+        if (w == childpid_) {
+          exited = true;
+        }
+        if (w < 0) {
+          err_ << "waitpid() returned -1";
+          rc = EXIT_FAILURE;
+          exited = true;
+        }
+      }
+
+      if( WIFEXITED(status) ) {
+        rc = WEXITSTATUS(status);
+      }
+      if (WIFSIGNALED(status)) {
+        rc = WEXITSTATUS(status);
+      }
+
+      // check if we reached timeout
+      std::time_t now = std::time(nullptr);
+      if (now - started > timeout_) {
+        kill(childpid_, SIGKILL);
+        rc = EXIT_FAILURE;
+        err = "Timeout.";
+        return;
+      }
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    out = out_.str();
+    err = err_.str();
+
+}
+
+void helpers::Runner::exec() {
+  // stdin, stdout, stderr
+  int proc_parent=0;
+  int proc_child=1;
+  int pipes[3][2];
+  for (int i = STDIN_FILENO; i <= STDERR_FILENO; i++) {
+    if (pipe(pipes[i]) < 0) {
+      err = "Unable to create pipe.";
+      rc = EXIT_FAILURE;
+      return;
+    }
+    // enable non-blocking IO
+    if (fcntl(*pipes[i], F_SETFL, O_NONBLOCK) < 0) {
+      err = "Unable to set fcntl.";
+      rc = EXIT_FAILURE;
+      return;
+    }
+  }
+  childpid_ = fork();
+  if (!childpid_) {
+
+    // child
+
+    dup2(pipes[STDIN_FILENO][proc_parent], STDIN_FILENO);
+
+    // close previously duplicated pipes
+    for (int i = STDOUT_FILENO; i <= STDERR_FILENO; i++) {
+      dup2(pipes[i][proc_child], i);
+      for (int j = 0; j < 2; j++) {
+        close(pipes[i][j]);
+      }
+    }
+
+    // convert arguments from vector to array
+    const char **argv = new const char* [arguments_.size()+1];
+    for (int i = 0;  i < arguments_.size();  ++i) {
+      argv[i] = arguments_[i].c_str();
+    }
+
+    argv[arguments_.size()] = NULL;
+
+    execv(argv[0], (char **)argv);
+  }
+
+  // parent
+
+  // close unneeded parent's pipes
+  close(pipes[STDIN_FILENO][proc_parent]);
+  for (int i = STDOUT_FILENO; i <= STDERR_FILENO; i++) {
+    close(pipes[i][proc_child]);
+  }
+
+  // write to child's stdin
+  write(
+    pipes[STDIN_FILENO][proc_child],
+    input_.c_str(),
+    input_.size()
+  );
+
+  // read from pipes and check for timeout
+  parentRead_(
+    pipes[STDOUT_FILENO][proc_parent],
+    pipes[STDERR_FILENO][proc_parent]
+  );
+
+  // close pipes
+
+  close(pipes[STDIN_FILENO][proc_child]);
+  close(pipes[STDERR_FILENO][proc_parent]);
+  close(pipes[STDOUT_FILENO][proc_parent]);
+
+  return;
 }

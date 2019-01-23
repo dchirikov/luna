@@ -33,16 +33,44 @@
 #include <sys/stat.h>
 #include <vector>
 #include <dirent.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <fcntl.h>
+#include <chrono>
+#include <thread>
+#include <sstream>
+#include <boost/tokenizer.hpp>
 
 namespace helpers {
-  int create_dir(std::string path);
-  int chowner(std::string path, uid_t pw_uid, gid_t pw_gid);
-  int create_dir_and_chown(std::string path, uid_t pw_uid, gid_t pw_gid);
+  int create_dir(const std::string& path);
+  int chowner(const std::string& path, uid_t pw_uid, gid_t pw_gid);
+  int create_dir_and_chown(const std::string& path, uid_t pw_uid, gid_t pw_gid);
   int createDirs(const OptionParser &opts);
   int changeUser(const OptionParser &opts);
   bool pidFileExists(const OptionParser &opts);
   int killProcess(const OptionParser &opts);
   std::vector<std::string> readDirectory(const std::string& dirname);
+  class Runner {
+  public:
+    Runner(const std::string& cmd, const std::string& input, int timeout=30);
+    Runner(const std::vector<std::string>& cmd, const std::string& input, int timeout=30);
+    void exec();
+    std::string out;
+    std::string err;
+    int rc=0;
+  private:
+    int timeout_=1;
+    int msgSize_=100;
+    int childpid_=0;
+    std::string input_;
+    std::ostringstream out_;
+    std::ostringstream err_;
+    bool readPipe_(int p, std::ostringstream& out);
+    void parentRead_(int po, int pe);
+    std::vector<std::string> arguments_;
+  };
 }
 
 std::ostream& operator <<(std::ostream& os, const std::vector<std::string>& v);

@@ -110,4 +110,20 @@ void Torrents::updateLocalFiles_() {
 
 void Torrents::updateLunaFiles_() {
   log_trace(__PRETTY_FUNCTION__);
+  helpers::Runner r(opts_.getImagesCmd, "");
+  r.exec();
+  if (r.rc) {
+    log_error("Unable to check osimages");
+    if (r.err != "") {
+      log_error("Command's STDERR: " << r.err);
+    }
+    return;
+  }
+  if (r.out == "") {
+    log_debug("List of osimages is empty");
+    return;
+  }
+  log_debug("Command's STDOUT: " << r.out);
+
+
 }

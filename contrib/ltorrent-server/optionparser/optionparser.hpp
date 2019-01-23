@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "../config.hpp"
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
@@ -55,6 +56,7 @@ public:
   std::string logPatternDebug = "[%D{%m/%d/%y %H:%M:%S:%q}][%p] %m [%b:%L]%n";
   uid_t pw_uid;
   gid_t pw_gid;
+  std::vector<std::string> getImagesCmd{DEFAULT_LTORRENT_GET_OSIMAGES_CMD};
 private:
   void getEnvironment_();
   void PrintHelp_();
