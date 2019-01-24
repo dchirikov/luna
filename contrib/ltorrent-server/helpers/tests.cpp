@@ -83,4 +83,28 @@ int main(int argc, char* argv[]) {
     assert((r.out == ""));
     assert((r.err == ""));
   }
+  {
+    std::string s = "a\nb";
+    std::vector<std::string> expected = {"a", "b"};
+    auto lines = helpers::splitString(s);
+    assert(lines == expected);
+  }
+  {
+    std::string s = "a\nb\n";
+    std::vector<std::string> expected = {"a", "b"};
+    auto lines = helpers::splitString(s);
+    assert(lines == expected);
+  }
+  {
+    std::string s = "a\nb\n\n";
+    std::vector<std::string> expected = {"a", "b"};
+    auto lines = helpers::splitString(s);
+    assert(lines == expected);
+  }
+  {
+    std::string s = "\na\nb\n\n";
+    std::vector<std::string> expected = {"a", "b"};
+    auto lines = helpers::splitString(s);
+    assert(lines == expected);
+  }
 }

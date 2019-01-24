@@ -31,7 +31,12 @@
 #include <mutex>
 #include <libtorrent/torrent_info.hpp>
 #include <libtorrent/error_code.hpp>
+#include <libtorrent/session.hpp>
+#include <libtorrent/session_settings.hpp>
+#include <libtorrent/alert_types.hpp>
+#include <deque>
 #include <chrono>
+#include <iomanip>
 
 typedef std::chrono::time_point<std::chrono::system_clock> timeStamp_t;
 
@@ -41,21 +46,27 @@ struct localFile_t {
 };
 
 struct lunaTorrent_t {
-  libtorrent::torrent_info torrent_info;
+  std::string torrentFile;
   timeStamp_t timeStamp;
   bool isInLuna;
+  bool isSeeding;
 };
 
-typedef std::map<std::string, lunaTorrent_t> torrentsList_t;
+typedef std::map<libtorrent::sha1_hash, lunaTorrent_t> torrentsList_t;
 
 class Torrents {
 public:
   Torrents(const OptionParser &opts);
+  bool init();
   bool update();
+  void readAlerts();
 private:
   localFile_t parseTorrentFile_(std::string);
+  libtorrent::session session_;
   void updateLocalFiles_();
   void updateLunaFiles_();
+  void seedOSImages_();
+  void deleteOldTorrents_();
   const OptionParser opts_;
   log4cplus::Logger logger_;
   torrentsList_t torrents_;
@@ -63,3 +74,5 @@ private:
   timeStamp_t lastCheckedLuna_;
   std::unique_lock<std::mutex> torrentsLock_;
 };
+
+std::ostream& operator <<(std::ostream& os, const torrentsList_t& l);

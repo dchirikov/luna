@@ -22,6 +22,7 @@
 #include "server.hpp"
 
 std::sig_atomic_t LTorrent::running_ = true;
+std::sig_atomic_t LTorrent::needUpdate_ = true;
 
 LTorrent::LTorrent(const OptionParser &opts)
   : opts_(opts),
@@ -39,6 +40,7 @@ void LTorrent::stopHandler(int signal) {
 void LTorrent::updateHandler(int signal) {
   auto logger = log4cplus::Logger::getInstance(DEFAULT_LOGGER_NAME);
   LOG4CPLUS_TRACE(logger, __PRETTY_FUNCTION__);
+  needUpdate_ = true;
 }
 
 int LTorrent::daemonize() {
@@ -125,9 +127,17 @@ int LTorrent::run() {
   }
   log_debug("Run main loop");
   Torrents torrents(opts_);
-  torrents.update();
+  if (!torrents.init()) {
+    log_error("Unable to initialize torrents");
+    return(EXIT_FAILURE);
+  }
   while (running_) {
     log_trace("running");
+    if (needUpdate_) {
+      needUpdate_ = false;
+      torrents.update();
+    }
+    torrents.readAlerts();
     sleep(1);
   }
   log_debug("stopping");

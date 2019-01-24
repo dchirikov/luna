@@ -328,3 +328,25 @@ void helpers::Runner::exec() {
 
   return;
 }
+
+std::vector<std::string> helpers::splitString(
+    const std::string& s, const std::string& d) {
+
+  std::vector<std::string> strings;
+
+  std::string::size_type pos = 0;
+  std::string::size_type prev = 0;
+  while ((pos = s.find(d, prev)) != std::string::npos) {
+    auto elem = s.substr(prev, pos - prev);
+    if (elem != "") {
+      strings.push_back(elem);
+    }
+    prev = pos + d.size();
+  }
+
+  auto rest = s.substr(prev);
+  if ((rest != d) & (rest != "")) {
+    strings.push_back(rest);
+  }
+  return strings;
+}

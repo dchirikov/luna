@@ -57,6 +57,14 @@ public:
   uid_t pw_uid;
   gid_t pw_gid;
   std::vector<std::string> getImagesCmd{DEFAULT_LTORRENT_GET_OSIMAGES_CMD};
+  std::string agentName = DEFAULT_LTORRENT_AGENT_NAME;
+  std::string listenIP = DEFAULT_LTORRENT_LISTEN_IP;
+  int listenPortMin = DEFAULT_LTORRENT_LISTEN_PORT_MIN;
+  int listenPortMax = DEFAULT_LTORRENT_LISTEN_PORT_MAX;
+  int sslPort = DEFAULT_LTORRENT_SSL_PORT;
+  bool natpmp = DEFAULT_LTORRENT_ENABLE_NATPMP;
+  bool upnp = DEFAULT_LTORRENT_ENABLE_UPNP;
+  bool lsd = DEFAULT_LTORRENT_ENABLE_LSD;
 private:
   void getEnvironment_();
   void PrintHelp_();

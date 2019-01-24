@@ -47,4 +47,5 @@ private:
   const OptionParser opts_;
   log4cplus::Logger logger_;
   static std::sig_atomic_t running_;
+  static std::sig_atomic_t needUpdate_;
 };

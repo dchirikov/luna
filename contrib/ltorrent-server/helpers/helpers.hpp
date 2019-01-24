@@ -52,6 +52,8 @@ namespace helpers {
   bool pidFileExists(const OptionParser &opts);
   int killProcess(const OptionParser &opts);
   std::vector<std::string> readDirectory(const std::string& dirname);
+  std::vector<std::string> splitString(
+      const std::string& s, const std::string& d="\n");
   class Runner {
   public:
     Runner(const std::string& cmd, const std::string& input, int timeout=30);
