@@ -34,11 +34,19 @@
 #include <libtorrent/session.hpp>
 #include <libtorrent/session_settings.hpp>
 #include <libtorrent/alert_types.hpp>
+#include <libtorrent/torrent_handle.hpp>
 #include <deque>
 #include <chrono>
 #include <iomanip>
 
-typedef std::chrono::time_point<std::chrono::system_clock> timeStamp_t;
+typedef enum {
+  NOT_SEEDING,
+  ADDED_FOR_SEEDING,
+  SEEDING,
+  MARKED_FOR_DELETION,
+} seedStatus_t;
+
+typedef std::chrono::system_clock::time_point timeStamp_t;
 
 struct localFile_t {
   std::string filename;
@@ -49,7 +57,8 @@ struct lunaTorrent_t {
   std::string torrentFile;
   timeStamp_t timeStamp;
   bool isInLuna;
-  bool isSeeding;
+  seedStatus_t isSeeding;
+  libtorrent::torrent_handle torrentHandler;
 };
 
 typedef std::map<libtorrent::sha1_hash, lunaTorrent_t> torrentsList_t;
@@ -60,19 +69,20 @@ public:
   bool init();
   bool update();
   void readAlerts();
+  void deleteOldTorrents();
 private:
   localFile_t parseTorrentFile_(std::string);
   libtorrent::session session_;
   void updateLocalFiles_();
   void updateLunaFiles_();
   void seedOSImages_();
-  void deleteOldTorrents_();
   const OptionParser opts_;
   log4cplus::Logger logger_;
   torrentsList_t torrents_;
   std::mutex torrentsMutex_;
   timeStamp_t lastCheckedLuna_;
   std::unique_lock<std::mutex> torrentsLock_;
+  void traceTorrents_();
 };
 
 std::ostream& operator <<(std::ostream& os, const torrentsList_t& l);

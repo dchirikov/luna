@@ -96,6 +96,7 @@ int helpers::killProcess(const OptionParser &opts) {
   std::ifstream pidfile(opts.pidFile);
   pid_t pid;
   pidfile >> pid;
+  std::cout << "Trying to kill process with PID " << pid << "\n";
   // check if process exists
   if (kill(pid, 0)) {
     std::cerr << "Process with PID '" << pid << "' is not running\n";
@@ -349,4 +350,17 @@ std::vector<std::string> helpers::splitString(
     strings.push_back(rest);
   }
   return strings;
+}
+
+bool helpers::timeout(
+      const std::chrono::system_clock::time_point& timestamp,
+      int sec) {
+
+  auto now = std::chrono::system_clock::now();
+
+  int diff = (
+    std::chrono::duration_cast<std::chrono::seconds>(now - timestamp)
+  ).count();
+
+  return(diff > sec);
 }

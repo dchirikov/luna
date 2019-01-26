@@ -138,9 +138,10 @@ int LTorrent::run() {
       torrents.update();
     }
     torrents.readAlerts();
+    torrents.deleteOldTorrents();
     sleep(1);
   }
-  log_debug("stopping");
+  log_debug("Stopping");
 
   return(0);
 }

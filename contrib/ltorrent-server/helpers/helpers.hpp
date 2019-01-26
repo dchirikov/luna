@@ -73,6 +73,8 @@ namespace helpers {
     void parentRead_(int po, int pe);
     std::vector<std::string> arguments_;
   };
+  bool timeout(
+      const std::chrono::system_clock::time_point& timestamp, int sec);
 }
 
 std::ostream& operator <<(std::ostream& os, const std::vector<std::string>& v);

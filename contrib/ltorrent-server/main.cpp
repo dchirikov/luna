@@ -24,7 +24,6 @@
 int main(int argc, char* argv[]) {
   auto opts = OptionParser(argc, argv);
   if (opts.kill) {
-    std::cout << "Trying to kill process.\n";
     if (helpers::changeUser(opts)) {
       exit(EXIT_FAILURE);
     }

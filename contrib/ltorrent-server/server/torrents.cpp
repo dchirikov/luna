@@ -65,7 +65,6 @@ bool Torrents::update() {
   updateLocalFiles_();
   updateLunaFiles_();
   seedOSImages_();
-  deleteOldTorrents_();
 }
 
 localFile_t Torrents::parseTorrentFile_(std::string f) {
@@ -85,7 +84,7 @@ localFile_t Torrents::parseTorrentFile_(std::string f) {
     throw(LtorrentsException(""));
   }
   log_info("Torrent file is found: " << f);
-  // if we unable to get torrent_info from *.torrent file,
+  // if we are unable to get torrent_info from *.torrent file,
   // it is nothing we can do.
   try {
     auto file_info = libtorrent::torrent_info(f, 0);
@@ -130,17 +129,20 @@ void Torrents::updateLocalFiles_() {
       log_debug("'" << filename << "' is in torrents_ already");
       continue;
     }
+
+    // add new record
     log_debug("'" << filename << "' is not in torrents_");
     auto now = std::chrono::system_clock::now();
     torrents_.insert(
       std::pair<libtorrent::sha1_hash, lunaTorrent_t>(
         torrent_info.info_hash(),
-        {filename, now, false, false}
+        {filename, now, false, NOT_SEEDING, {}}
       )
     );
+
   }
-  log_debug("Torrents: " << torrents_);
   torrentsLock_.unlock();
+  traceTorrents_();
 }
 
 void Torrents::updateLunaFiles_() {
@@ -190,8 +192,8 @@ void Torrents::updateLunaFiles_() {
     (*it).second.isInLuna = true;
     (*it).second.timeStamp = std::chrono::system_clock::now();
   }
-  log_debug("Torrents: " << torrents_);
   torrentsLock_.unlock();
+  traceTorrents_();
 
   // report if we have some uuids without files on disks
   for (
@@ -220,12 +222,43 @@ std::ostream& operator <<(
   return os;
 }
 
+std::ostream& operator <<(
+    std::ostream& os, const libtorrent::torrent_handle& l) {
+
+  std::vector<std::string> torrent_handlerConv{
+    "queued_for_checking", "checking_files", "downloading_metadata",
+    "downloading", "finished", "seeding", "allocating",
+    "checking_resume_data"
+  };
+
+  os << torrent_handlerConv[l.status().state];
+  return os;
+}
+
+/*
+std::ostream& operator <<(
+    std::ostream& os, const libtorrent::state_t& l) {
+  return os;
+} */
+
+std::ostream& operator <<(
+      std::ostream& os, const seedStatus_t& l) {
+
+  std::vector<std::string> seedStatus_tConv{
+    "NOT_SEEDING", "ADDED_FOR_SEEDING", "SEEDING", "MARKED_FOR_DELETION"
+  };
+
+  os << seedStatus_tConv[l];
+  return os;
+}
+
 std::ostream& operator <<(std::ostream& os, const lunaTorrent_t& l) {
   os << "("
      << "torrentFile: '" << l.torrentFile << "', "
      << "timeStamp: '" << l.timeStamp << "', "
-     << "isInLuna: " << l.isInLuna << "', "
-     << "isSeeding: " << l.isSeeding
+     << "isInLuna: " << l.isInLuna << ", "
+     << "isSeeding: " << l.isSeeding << ", "
+     << "torrentHandler: " << l.torrentHandler
      << ")";
   return os;
 }
@@ -244,16 +277,22 @@ void Torrents::seedOSImages_() {
   log_trace(__PRETTY_FUNCTION__);
   torrentsLock_.lock();
   for (auto it = torrents_.begin(); it != torrents_.end(); it++) {
-    if ((*it).second.isSeeding) {
+
+    // already seeding. nothing to do
+    if ((*it).second.isSeeding != NOT_SEEDING) {
       log_debug("'" << (*it).second.torrentFile
           << "' is being seeded already.");
       continue;
     }
+
+    // someone put torrent which is not related to luna
     if (!(*it).second.isInLuna) {
       log_debug("'" << (*it).second.torrentFile
           << "' is not in Luna. Skipping.");
       continue;
     }
+
+    // finally seed osimage
     libtorrent::add_torrent_params p;
     libtorrent::error_code ec;
     p.ti = new libtorrent::torrent_info((*it).second.torrentFile, ec);
@@ -266,7 +305,7 @@ void Torrents::seedOSImages_() {
     log_info("'" << (*it).second.torrentFile
         << "' added to ltorrent for seeding.");
     session_.async_add_torrent(std::move(p));
-    (*it).second.isSeeding = true;
+    (*it).second.isSeeding = ADDED_FOR_SEEDING;
   }
   torrentsLock_.unlock();
 }
@@ -275,15 +314,105 @@ void Torrents::readAlerts() {
   std::deque<libtorrent::alert*> alerts;
   session_.pop_alerts(&alerts);
   for (auto const* a : alerts) {
+
+    // catch adding alert
     if (auto at = libtorrent::alert_cast<libtorrent::add_torrent_alert>(a)) {
       auto h = at->handle;
       auto ti = *(h.torrent_file());
       log_info("'" << ti.name() << "' started seeding.");
+      torrentsLock_.lock();
+      auto elem = torrents_.find(h.info_hash());
+      if (elem == torrents_.end()) {
+        log_error("Some unknown file was added. This should not happen.");
+        torrentsLock_.unlock();
+        continue;
+      }
+      (*elem).second.isSeeding = SEEDING;
+      (*elem).second.torrentHandler = h;
+      torrentsLock_.unlock();
+      traceTorrents_();
+    }
+
+    if (auto at = libtorrent::alert_cast<libtorrent::torrent_deleted_alert>(a)) {
+      auto ih = at->info_hash;
+      {
+        auto elem = torrents_.find(ih);
+        torrentsLock_.lock();
+        if (elem == torrents_.end()) {
+          log_error("torrent_deleted_alert received for unknown info_hash: '"
+              << ih << "'");
+          torrentsLock_.unlock();
+          continue;
+        }
+        auto torrentFile = (*elem).second.torrentFile;
+        if (std::remove(torrentFile.c_str()) != 0 ) {
+          log_error("Unable to delete " << torrentFile);
+        }
+      }
+      torrents_.erase(ih);
+      torrentsLock_.unlock();
+      traceTorrents_();
     }
   }
 }
 
-void Torrents::deleteOldTorrents_() {
+void Torrents::deleteOldTorrents() {
   log_trace(__PRETTY_FUNCTION__);
+  torrentsLock_.lock();
+  for (auto it = torrents_.begin(); it != torrents_.end(); it++) {
+    if ((*it).second.isInLuna) {
+      log_trace("'" << (*it).second.torrentFile << "' is in Luna.");
+      // check if libtorrent failed to add our torrent in reasonable time
+      if (
+          ((*it).second.isSeeding != SEEDING)
+          && (helpers::timeout(
+                (*it).second.timeStamp,
+                opts_.libtorrentAddTimeout))
+      ) {
+        log_error("'" << (*it).second.torrentFile
+            << "' should be seeding, but it's not.");
+      }
+      continue;
+    }
 
+    // Torrent will be seeded for a while to let nodes which are stuck
+    // on boot to get the images, despite tarball of osimage is replaced
+    if (!helpers::timeout(
+          (*it).second.timeStamp,
+          opts_.holdingDeletedTorrentsSec
+        )) {
+      log_trace("'" << (*it).second.torrentFile
+          << "' is deleted from Luna, but it did not hit timeout.");
+      continue;
+    }
+
+    if ((!(*it).second.torrentHandler.is_valid())
+        && ((*it).second.isSeeding != MARKED_FOR_DELETION)) {
+      log_warning("Something is not right. '" << (*it).second.torrentFile
+          << "' not in Luna and libtorrent handler is unknown.");
+    }
+
+    // Mark torrent ready for deletion
+    (*it).second.isSeeding = MARKED_FOR_DELETION;
+
+    // stop seeding and remove tarball
+    log_info("Removing torrent from seeding '"
+        << (*it).second.torrentFile << "'");
+    session_.remove_torrent(
+      (*it).second.torrentHandler,
+      libtorrent::session::delete_files);
+
+  }
+  torrentsLock_.unlock();
+  traceTorrents_();
 }
+
+void Torrents::traceTorrents_() {
+  torrentsLock_.lock();
+  log_trace("Torrents:");
+  for (auto it = torrents_.begin(); it != torrents_.end(); it++) {
+    log_trace((*it).first << ": " << (*it).second);
+  }
+  torrentsLock_.unlock();
+}
+

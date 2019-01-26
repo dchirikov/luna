@@ -41,11 +41,13 @@
           [luna.OsImage(n).get('torrent') \
             for n in luna.list('osimage') if luna.OsImage(n).get('torrent')] \
       )"
-#define DEFAULT_LTORRENT_AGENT_NAME   "lunalunalunalunaluna"
-#define DEFAULT_LTORRENT_LISTEN_IP    "0.0.0.0"
+#define DEFAULT_LTORRENT_AGENT_NAME       "lunalunalunalunaluna"
+#define DEFAULT_LTORRENT_LISTEN_IP        "0.0.0.0"
 #define DEFAULT_LTORRENT_LISTEN_PORT_MIN  7052
 #define DEFAULT_LTORRENT_LISTEN_PORT_MAX  7200
-#define DEFAULT_LTORRENT_SSL_PORT     0
-#define DEFAULT_LTORRENT_ENABLE_NATPMP  false
-#define DEFAULT_LTORRENT_ENABLE_UPNP  false
-#define DEFAULT_LTORRENT_ENABLE_LSD   false
+#define DEFAULT_LTORRENT_SSL_PORT         0
+#define DEFAULT_LTORRENT_ENABLE_NATPMP    false
+#define DEFAULT_LTORRENT_ENABLE_UPNP      false
+#define DEFAULT_LTORRENT_ENABLE_LSD       false
+#define DEFAULT_LIBTORRENT_ADD_TIMEOUT    30
+#define DEFAULT_LTORRENT_HOLDING_DELETED_TORRENTS_SEC   3600

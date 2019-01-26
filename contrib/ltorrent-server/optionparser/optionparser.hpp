@@ -65,6 +65,8 @@ public:
   bool natpmp = DEFAULT_LTORRENT_ENABLE_NATPMP;
   bool upnp = DEFAULT_LTORRENT_ENABLE_UPNP;
   bool lsd = DEFAULT_LTORRENT_ENABLE_LSD;
+  int libtorrentAddTimeout = DEFAULT_LIBTORRENT_ADD_TIMEOUT;
+  int holdingDeletedTorrentsSec = DEFAULT_LTORRENT_HOLDING_DELETED_TORRENTS_SEC;
 private:
   void getEnvironment_();
   void PrintHelp_();
